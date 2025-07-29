@@ -444,7 +444,8 @@ voiceRoomSchema.pre('save', function(next) {
   next();
 });
 
-const VoiceRoom = mongoose.model('VoiceRoom', voiceRoomSchema);
+// تعريف موديل VoiceRoom مع التحقق من عدم إعادة التعريف
+const VoiceRoom = mongoose.models.VoiceRoom || mongoose.model('VoiceRoom', voiceRoomSchema);
 
 // وظيفة إنشاء إشعار
 const createNotification = async (userId, type, title, message, data = {}, fromUserId = null, userPlayerId = null) => {
@@ -4072,4 +4073,23 @@ wss.on('connection', (socket) => {
           }));
           // تقليل logs - فقط للـ offers والـ answers
           if (data.type === 'webrtc_offer' || data.type === 'webrtc_answer') {
-            console.log(`
+            console.log(`WebRTC signal sent: ${data.type}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('WebSocket error:', error);
+      socket.send(JSON.stringify({ type: 'error', message: 'خطأ في الاتصال بالخادم' }));
+      socket.close();
+    }
+  });
+
+  socket.on('close', () => {
+    console.log('🔌 WebSocket client disconnected');
+    connectedClients.delete(currentUserId);
+  });
+});
+
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+});
