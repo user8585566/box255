@@ -1,0 +1,46 @@
+# أوامر Docker للنشر
+# ===================
+
+## بناء صورة Docker:
+docker build -t my-app .
+
+## تشغيل الحاوية:
+docker run -p 3000:3000 my-app
+
+## تشغيل باستخدام Docker Compose:
+docker-compose up -d
+
+## إيقاف التطبيق:
+docker-compose down
+
+## عرض الحاويات النشطة:
+docker ps
+
+## عرض سجلات التطبيق:
+docker-compose logs -f
+
+## إعادة بناء وتشغيل:
+docker-compose up -d --build
+
+## حذف الصور والحاويات:
+docker system prune -a
+
+## أوامر مفيدة إضافية:
+
+### الدخول إلى الحاوية:
+docker exec -it <container_id> sh
+
+### نسخ ملفات من/إلى الحاوية:
+docker cp <container_id>:/app/file.txt ./local-file.txt
+
+### عرض معلومات الصورة:
+docker images
+
+### حذف صورة محددة:
+docker rmi my-app
+
+## ملاحظات مهمة:
+- تأكد من تثبيت Docker و Docker Compose
+- تأكد من أن المنفذ 3000 متاح
+- استخدم docker-compose up -d للعمل في الخلفية
+- استخدم docker-compose logs لمتابعة السجلات 

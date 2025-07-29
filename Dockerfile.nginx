@@ -1,0 +1,17 @@
+# Dockerfile لـ Nginx
+FROM nginx:alpine
+
+# نسخ ملف التكوين المخصص
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# إنشاء مجلد للملفات الثابتة
+RUN mkdir -p /usr/share/nginx/html
+
+# نسخ الملفات الثابتة من التطبيق
+COPY dist/public /usr/share/nginx/html
+
+# فتح المنفذ 80
+EXPOSE 80
+
+# تشغيل Nginx
+CMD ["nginx", "-g", "daemon off;"] 

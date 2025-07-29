@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # تطبيق Node.js
+  app:
+    build: .
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - app-network
+    # لا نفتح المنفذ مباشرة، Nginx سيتعامل مع ذلك
+
+  # خادم Nginx
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+      - "443:443"  # للـ HTTPS
+    depends_on:
+      - app
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # للشهادات (اختياري)
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: infinitybox25-agora
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /
+    healthCheckTimeout: 300
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: AGORA_APP_ID
+        sync: false
+      - key: AGORA_APP_CERTIFICATE
+        sync: false
+    buildCommand: npm install && npm run build
+    startCommand: node --max-old-space-size=512 server.js

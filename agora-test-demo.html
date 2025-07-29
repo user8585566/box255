@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار Agora Voice - تجريبي</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #ffd700;
+        }
+        
+        .button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .button.success {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+        
+        .button.danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: rgba(46, 204, 113, 0.3);
+            border: 1px solid #2ecc71;
+            color: #2ecc71;
+        }
+        
+        .status.error {
+            background: rgba(231, 76, 60, 0.3);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+        }
+        
+        .status.info {
+            background: rgba(52, 152, 219, 0.3);
+            border: 1px solid #3498db;
+            color: #3498db;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .warning {
+            background: rgba(255, 193, 7, 0.3);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 اختبار Agora Voice - نسخة تجريبية</h1>
+        
+        <div class="warning">
+            ⚠️ <strong>ملاحظة مهمة:</strong> هذا اختبار تجريبي. لاستخدام Agora بشكل كامل، تحتاج إلى:
+            <br>• إنشاء حساب مجاني في <a href="https://console.agora.io/" target="_blank" style="color: #ffd700;">Agora Console</a>
+            <br>• إنشاء مشروع جديد في وضع "Testing Mode"
+            <br>• نسخ App ID الخاص بك واستبداله في الكود
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 اختبار أساسي</h3>
+            <button class="button" onclick="testBasicSetup()">اختبار الإعداد الأساسي</button>
+            <button class="button" onclick="testMicrophone()">اختبار المايك</button>
+            <div id="basicStatus" class="status info">جاهز للاختبار</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎙️ محاكاة Agora</h3>
+            <button class="button success" onclick="simulateAgoraFlow()">محاكاة تدفق Agora</button>
+            <div id="simulationStatus" class="status info">لم يتم التشغيل بعد</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 سجل الأحداث</h3>
+            <button class="button" onclick="clearLog()">مسح السجل</button>
+            <div id="eventLog" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // دالة تسجيل الأحداث
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#e74c3c' : type === 'success' ? '#2ecc71' : '#3498db';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        // مسح السجل
+        function clearLog() {
+            document.getElementById('eventLog').innerHTML = '';
+        }
+        
+        // تحديث حالة الاختبار الأساسي
+        function updateBasicStatus(status, type = 'info') {
+            const statusDiv = document.getElementById('basicStatus');
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // تحديث حالة المحاكاة
+        function updateSimulationStatus(status, type = 'info') {
+            const statusDiv = document.getElementById('simulationStatus');
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // اختبار الإعداد الأساسي
+        function testBasicSetup() {
+            log('🔧 بدء اختبار الإعداد الأساسي...', 'info');
+            updateBasicStatus('جاري الاختبار...', 'info');
+            
+            // اختبار دعم المتصفح للصوت
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                log('✅ المتصفح يدعم الوصول للمايك', 'success');
+            } else {
+                log('❌ المتصفح لا يدعم الوصول للمايك', 'error');
+                updateBasicStatus('المتصفح غير مدعوم', 'error');
+                return;
+            }
+            
+            // اختبار WebRTC
+            if (window.RTCPeerConnection) {
+                log('✅ المتصفح يدعم WebRTC', 'success');
+            } else {
+                log('❌ المتصفح لا يدعم WebRTC', 'error');
+                updateBasicStatus('WebRTC غير مدعوم', 'error');
+                return;
+            }
+            
+            // اختبار AudioContext
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                log('✅ AudioContext متاح', 'success');
+                audioContext.close();
+            } catch (error) {
+                log('⚠️ مشكلة في AudioContext: ' + error.message, 'error');
+            }
+            
+            log('🎉 جميع الاختبارات الأساسية نجحت!', 'success');
+            updateBasicStatus('جميع الاختبارات نجحت', 'success');
+        }
+        
+        // اختبار المايك
+        async function testMicrophone() {
+            try {
+                log('🎤 بدء اختبار المايك...', 'info');
+                updateBasicStatus('جاري اختبار المايك...', 'info');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                log('✅ تم الوصول للمايك بنجاح', 'success');
+                log(`🎵 عدد المسارات الصوتية: ${stream.getAudioTracks().length}`, 'info');
+                
+                // اختبار مستوى الصوت
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                
+                analyser.fftSize = 256;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                let testCount = 0;
+                const testInterval = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                    const level = Math.round((average / 128) * 100);
+                    
+                    log(`📊 مستوى الصوت: ${level}%`, 'info');
+                    testCount++;
+                    
+                    if (testCount >= 5) {
+                        clearInterval(testInterval);
+                        stream.getTracks().forEach(track => track.stop());
+                        audioContext.close();
+                        log('✅ اختبار المايك مكتمل', 'success');
+                        updateBasicStatus('المايك يعمل بشكل صحيح', 'success');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                log(`❌ فشل في اختبار المايك: ${error.message}`, 'error');
+                updateBasicStatus('فشل في اختبار المايك', 'error');
+            }
+        }
+        
+        // محاكاة تدفق Agora
+        async function simulateAgoraFlow() {
+            log('🚀 بدء محاكاة تدفق Agora...', 'info');
+            updateSimulationStatus('جاري المحاكاة...', 'info');
+            
+            // محاكاة تهيئة العميل
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            log('✅ تم إنشاء عميل Agora (محاكاة)', 'success');
+            
+            // محاكاة الانضمام للقناة
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            log('✅ تم الانضمام للقناة (محاكاة)', 'success');
+            
+            // محاكاة إنشاء المسار الصوتي
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            log('✅ تم إنشاء المسار الصوتي (محاكاة)', 'success');
+            
+            // محاكاة نشر الصوت
+            await new Promise(resolve => setTimeout(resolve, 800));
+            log('✅ تم نشر الصوت (محاكاة)', 'success');
+            
+            // محاكاة انضمام مستخدم آخر
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            log('👤 انضم مستخدم آخر (محاكاة)', 'info');
+            log('🔊 تم استقبال صوت المستخدم الآخر (محاكاة)', 'success');
+            
+            // محاكاة اختبار الكتم
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            log('🔇 تم كتم المايك (محاكاة)', 'info');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            log('🔊 تم إلغاء كتم المايك (محاكاة)', 'info');
+            
+            log('🎉 محاكاة Agora مكتملة بنجاح!', 'success');
+            updateSimulationStatus('المحاكاة مكتملة بنجاح', 'success');
+            
+            log('💡 الخطوات التالية:', 'info');
+            log('1. إنشاء حساب في Agora Console', 'info');
+            log('2. إنشاء مشروع جديد في وضع Testing', 'info');
+            log('3. نسخ App ID واستبداله في الكود', 'info');
+            log('4. اختبار الاتصال الحقيقي', 'info');
+        }
+        
+        // تهيئة تلقائية عند تحميل الصفحة
+        window.addEventListener('load', () => {
+            log('🚀 تم تحميل صفحة اختبار Agora التجريبية', 'success');
+            log('💡 ابدأ بـ "اختبار الإعداد الأساسي"', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+# أوامر Nginx مع Docker
+# =====================
+
+## تشغيل التطبيق مع Nginx:
+docker-compose -f docker-compose-with-nginx.yml up -d
+
+## إيقاف التطبيق:
+docker-compose -f docker-compose-with-nginx.yml down
+
+## إعادة بناء وتشغيل:
+docker-compose -f docker-compose-with-nginx.yml up -d --build
+
+## عرض سجلات Nginx:
+docker-compose -f docker-compose-with-nginx.yml logs nginx
+
+## عرض سجلات التطبيق:
+docker-compose -f docker-compose-with-nginx.yml logs app
+
+## الدخول إلى حاوية Nginx:
+docker-compose -f docker-compose-with-nginx.yml exec nginx sh
+
+## اختبار تكوين Nginx:
+docker-compose -f docker-compose-with-nginx.yml exec nginx nginx -t
+
+## إعادة تحميل Nginx:
+docker-compose -f docker-compose-with-nginx.yml exec nginx nginx -s reload
+
+## أوامر مفيدة إضافية:
+
+### عرض الحاويات النشطة:
+docker ps
+
+### عرض استخدام الموارد:
+docker stats
+
+### حذف جميع الحاويات والصور:
+docker system prune -a
+
+### نسخ ملفات من/إلى الحاوية:
+docker cp <container_id>:/etc/nginx/nginx.conf ./nginx-backup.conf
+
+## معلومات مهمة:
+
+### المنافذ:
+- المنفذ 80: HTTP
+- المنفذ 443: HTTPS (اختياري)
+
+### الملفات:
+- nginx.conf: تكوين Nginx
+- Dockerfile.nginx: بناء صورة Nginx
+- docker-compose-with-nginx.yml: تكوين Docker Compose
+
+### المميزات:
+- ✅ ضغط الملفات (Gzip)
+- ✅ التخزين المؤقت
+- ✅ إعدادات الأمان
+- ✅ دعم WebSocket
+- ✅ إعادة توجيه API
+- ✅ إعدادات HTTPS (اختياري)
+
+## ملاحظات:
+- تأكد من أن المنفذ 80 متاح
+- للتطوير، استخدم docker-compose.yml العادي
+- للإنتاج، استخدم docker-compose-with-nginx.yml 

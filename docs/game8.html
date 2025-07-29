@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة الصناديق</title>
+    <script src="js/translations.js"></script>
+    <script src="js/game-economy.js"></script>
+    <script src="js/player-header.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #2c5282 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .player-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .player-details {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .player-avatar {
+            width: 50px;
+            height: 50px;
+            background: #ffd700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        
+        .player-data {
+            text-align: left;
+        }
+        
+        .player-name {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .player-balance {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .home-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .home-btn:hover {
+            background: #059669;
+        }
+        
+        .game-title {
+            font-size: 2.5em;
+            color: #ffd700;
+            margin-bottom: 30px;
+        }
+        
+        .boxes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 400px;
+            margin: 30px auto;
+        }
+        
+        .box {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(255, 215, 0, 0.5);
+        }
+        
+        .box.opened {
+            background: #666;
+            cursor: default;
+        }
+        
+        .box.win {
+            background: #10b981;
+        }
+        
+        .box.loss {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .box.empty {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            color: #d1d5db;
+        }
+
+        .box-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            padding: 4px;
+        }
+
+        .box-emoji {
+            font-size: 1.2em;
+            margin-bottom: 2px;
+        }
+
+        .box-value {
+            font-size: 0.5em;
+            font-weight: bold;
+            margin-bottom: 1px;
+            line-height: 1;
+        }
+
+        .box-name {
+            font-size: 0.25em;
+            opacity: 0.8;
+            line-height: 1;
+            text-align: center;
+        }
+
+        /* تأثيرات الصناديق */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .box.big-win {
+            animation: pulse 0.5s ease-in-out 3;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .bet-button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        .bet-button:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .bet-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .message {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .message.success { color: #10b981; }
+        .message.error { color: #ef4444; }
+        .message.info { color: #ffd700; }
+
+        /* تحسينات للجوال */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                max-width: 100vw;
+                padding: 8px;
+                margin: 2px;
+                box-sizing: border-box;
+            }
+
+            .header {
+                margin-bottom: 5px;
+                padding: 4px 6px;
+                flex-wrap: wrap;
+            }
+
+            .game-title {
+                font-size: 0.9em;
+                order: 1;
+                flex: 1;
+                text-align: center;
+            }
+
+            .back-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 1em;
+                order: 0;
+            }
+
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                margin: 5px 0;
+            }
+
+            .stat-item {
+                padding: 4px 6px;
+                border-radius: 6px;
+            }
+
+            .stat-value {
+                font-size: 1em;
+            }
+
+            .stat-label {
+                font-size: 0.7em;
+            }
+
+            .boxes-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin: 10px 0;
+                max-width: 100%;
+            }
+
+            .box {
+                width: 80px;
+                height: 80px;
+                font-size: 2em;
+                border-radius: 8px;
+            }
+
+            .box-number {
+                font-size: 0.6em;
+                top: 2px;
+                left: 2px;
+                width: 16px;
+                height: 16px;
+            }
+
+            .controls {
+                gap: 4px;
+                margin: 8px 0;
+                flex-wrap: wrap;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 0.75em;
+                border-radius: 8px;
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .result-message {
+                padding: 8px;
+                font-size: 0.8em;
+                margin: 8px 0;
+                border-radius: 8px;
+            }
+
+            .debug-panel {
+                font-size: 0.7em;
+                padding: 6px;
+                max-height: 120px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .boxes-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+
+            .box {
+                width: 70px;
+                height: 70px;
+                font-size: 1.8em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .control-btn {
+                width: 100%;
+                max-width: 200px;
+                margin: 2px 0;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- معلومات اللاعب -->
+        <div id="player-header-container">
+            <!-- سيتم إدراج هيدر اللاعب هنا بواسطة JavaScript -->
+        </div>
+        
+        <h1 class="game-title">🎁 صناديق الحظ 🎁</h1>
+        
+        <!-- منطقة الرسائل -->
+        <div id="message" class="message"></div>
+        
+        <!-- الصناديق -->
+        <div class="boxes-grid" id="boxes-container">
+            <!-- سيتم إنشاء الصناديق بواسطة JavaScript -->
+        </div>
+        
+        <!-- أزرار التحكم -->
+        <div class="controls">
+            <button id="single-btn" class="bet-button">
+                🎯 ضربة واحدة<br><small>(50 عملة)</small>
+            </button>
+            <button id="triple-btn" class="bet-button">
+                ⚡ ثلاث ضربات<br><small>(150 عملة)</small>
+            </button>
+            <button id="hammer-btn" class="bet-button">
+                🔨 ضربة المطرقة<br><small>(300 عملة)</small>
+            </button>
+        </div>
+        
+
+    </div>
+
+    <script>
+        // متغيرات اللعبة
+        let playerBalance = 1000;
+        let isPlaying = false;
+        let gameSession = null;
+        let currentRound = 1; // الجولة الحالية لتقليل الجوائز
+
+        // عناصر DOM
+        const boxesContainer = document.getElementById('boxes-container');
+        const messageDiv = document.getElementById('message');
+
+        // أنواع الرهانات
+        const betTypes = {
+            single: { cost: 50, boxes: 1, name: 'ضربة واحدة' },
+            triple: { cost: 150, boxes: 3, name: 'ثلاث ضربات' },
+            hammer: { cost: 300, boxes: 5, name: 'ضربة المطرقة' }
+        };
+
+        // محتويات الصناديق المتنوعة
+        const boxContents = {
+            // جوائز مربحة (40%)
+            profitable: [
+                { type: 'gold', emoji: '💰', value: 200, name: 'كيس ذهب', probability: 0.15 },
+                { type: 'gems', emoji: '💎', value: 500, name: 'جوهرة ثمينة', probability: 0.10 },
+                { type: 'treasure', emoji: '🏆', value: 1000, name: 'كنز ذهبي', probability: 0.05 },
+                { type: 'coins', emoji: '🪙', value: 150, name: 'عملات ذهبية', probability: 0.10 }
+            ],
+            // جوائز متوسطة (30%)
+            medium: [
+                { type: 'star', emoji: '⭐', value: 100, name: 'نجمة محظوظة', probability: 0.15 },
+                { type: 'gift', emoji: '🎁', value: 75, name: 'هدية صغيرة', probability: 0.10 },
+                { type: 'crystal', emoji: '🔮', value: 120, name: 'كريستال سحري', probability: 0.05 }
+            ],
+            // خسائر (20%)
+            losses: [
+                { type: 'bomb', emoji: '💣', value: -100, name: 'قنبلة!', probability: 0.08 },
+                { type: 'trap', emoji: '🕳️', value: -50, name: 'فخ!', probability: 0.07 },
+                { type: 'curse', emoji: '👻', value: -150, name: 'لعنة!', probability: 0.05 }
+            ],
+            // فارغ (10%)
+            empty: [
+                { type: 'empty', emoji: '❌', value: 0, name: 'فارغ', probability: 0.10 }
+            ]
+        };
+
+        // رسائل تشويق للصناديق
+        const excitementMessages = [
+            "🎁 صندوق مليء بالمفاجآت!",
+            "✨ ماذا يخبئ هذا الصندوق؟",
+            "🎲 حظك اليوم قد يغير كل شيء!",
+            "💫 استعد للمفاجأة!",
+            "🌟 صندوق الأحلام ينتظرك!",
+            "🎊 مفاجآت لا تُصدق!",
+            "🎈 حان وقت الحظ الذهبي!",
+            "🎯 اختيارك قد يكون الأفضل!"
+        ];
+
+        // دالة إضافة رسالة تشخيص (معطلة للإنتاج)
+        function addDebug(message) {
+            // تم تعطيل رسائل التشخيص لتنظيف الواجهة
+        }
+
+        // دالة عرض الرسائل
+        function showMessage(text, type = 'info') {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+        }
+
+        // دالة تحديث الرصيد
+        function updateBalance(newBalance) {
+            playerBalance = newBalance;
+
+            // تحديث الرصيد في هيدر اللاعب
+            if (window.playerHeader) {
+                window.playerHeader.updateBalance(newBalance);
+            }
+        }
+
+        // دالة إنشاء الصناديق
+        function createBoxes() {
+            addDebug('بدء إنشاء الصناديق...');
+
+            if (!boxesContainer) {
+                addDebug('❌ خطأ: عنصر الصناديق غير موجود!');
+                return;
+            }
+
+            boxesContainer.innerHTML = '';
+
+            for (let i = 0; i < 9; i++) {
+                const box = document.createElement('div');
+                box.className = 'box';
+                box.id = `box-${i}`;
+                box.textContent = '📦';
+                box.onclick = () => addDebug(`تم النقر على الصندوق ${i + 1}`);
+                boxesContainer.appendChild(box);
+            }
+
+            addDebug(`✅ تم إنشاء 9 صناديق بنجاح`);
+        }
+
+        // اختيار محتوى عشوائي للصندوق
+        function getRandomBoxContent() {
+            const allContents = [
+                ...boxContents.profitable,
+                ...boxContents.medium,
+                ...boxContents.losses,
+                ...boxContents.empty
+            ];
+
+            const random = Math.random();
+            let cumulativeProbability = 0;
+
+            for (const content of allContents) {
+                cumulativeProbability += content.probability;
+                if (random <= cumulativeProbability) {
+                    return content;
+                }
+            }
+
+            // احتياطي - إرجاع محتوى فارغ
+            return boxContents.empty[0];
+        }
+
+        // تتبع الجولات لتقليل الجوائز عند التكرار
+        function checkRoundProgression() {
+            // كل 10 ألعاب، زيادة الجولة وتقليل الجوائز قليلاً
+            const gamesPlayed = parseInt(localStorage.getItem('lucky-boxes-games-played') || '0');
+            const newGamesCount = gamesPlayed + 1;
+            localStorage.setItem('lucky-boxes-games-played', newGamesCount.toString());
+
+            const newRound = Math.floor(newGamesCount / 10) + 1;
+            if (newRound > currentRound) {
+                currentRound = newRound;
+                showMessage(`🎯 الجولة ${currentRound} - تحدي أكبر!`, 'info');
+            }
+        }
+
+        // حساب الجائزة مع تقليل التكرار
+        function calculateReward(baseValue) {
+            if (currentRound === 1) return baseValue;
+
+            const reductionPercentage = (currentRound - 1) * 10;
+            const maxReduction = 50; // حد أقصى 50% تقليل
+            const actualReduction = Math.min(reductionPercentage, maxReduction);
+
+            return Math.floor(baseValue * (100 - actualReduction) / 100);
+        }
+
+        // إضافة تأثيرات بصرية للصناديق
+        function addBoxAnimation(box, type) {
+            box.style.transform = 'scale(1.2)';
+            box.style.transition = 'all 0.3s ease';
+
+            setTimeout(() => {
+                box.style.transform = 'scale(1)';
+            }, 300);
+
+            // إضافة تأثير وميض للجوائز الكبيرة
+            if (type === 'big-win') {
+                box.style.animation = 'pulse 0.5s ease-in-out 3';
+            }
+        }
+
+        // دالة اللعب المحسنة مع الفتح العشوائي
+        async function playGame(type) {
+            if (isPlaying) {
+                showMessage('اللعبة قيد التشغيل...', 'info');
+                return;
+            }
+
+            const bet = betTypes[type];
+            if (!bet) {
+                showMessage('نوع رهان غير صحيح!', 'error');
+                return;
+            }
+
+            // التحقق من إمكانية اللعب
+            if (window.gameEconomy && gameSession) {
+                const canPlayResult = window.gameEconomy.canPlay(bet.cost);
+                if (!canPlayResult.canPlay) {
+                    showMessage(canPlayResult.reason, 'error');
+                    return;
+                }
+            } else if (playerBalance < bet.cost) {
+                showMessage('رصيدك غير كافي!', 'error');
+                return;
+            }
+
+            isPlaying = true;
+
+            // تعطيل الأزرار
+            document.getElementById('single-btn').disabled = true;
+            document.getElementById('triple-btn').disabled = true;
+            document.getElementById('hammer-btn').disabled = true;
+
+            // تحقق من تقدم الجولات
+            checkRoundProgression();
+
+            showMessage(`🎮 بدء ${bet.name}... استعد للمفاجآت!`, 'info');
+
+            // إنشاء الصناديق
+            createBoxes();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // رسالة تشويق عشوائية
+            const randomMessage = excitementMessages[Math.floor(Math.random() * excitementMessages.length)];
+            showMessage(randomMessage, 'info');
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // فتح الصناديق عشوائياً
+            const boxes = Array.from(document.querySelectorAll('.box'));
+            let totalWin = 0;
+            let totalLoss = 0;
+            const results = [];
+
+            for (let i = 0; i < bet.boxes && boxes.length > 0; i++) {
+                // اختيار صندوق عشوائي
+                const randomIndex = Math.floor(Math.random() * boxes.length);
+                const selectedBox = boxes[randomIndex];
+                boxes.splice(randomIndex, 1); // إزالة الصندوق من القائمة
+
+                // اختيار محتوى عشوائي
+                const content = getRandomBoxContent();
+                const finalValue = calculateReward(content.value);
+
+                // تحديث الصندوق
+                selectedBox.innerHTML = `
+                    <div class="box-content">
+                        <div class="box-emoji">${content.emoji}</div>
+                        <div class="box-value">${finalValue > 0 ? '+' : ''}${finalValue}</div>
+                        <div class="box-name">${content.name}</div>
+                    </div>
+                `;
+
+                if (finalValue > 0) {
+                    selectedBox.className = 'box opened win';
+                    totalWin += finalValue;
+                } else if (finalValue < 0) {
+                    selectedBox.className = 'box opened loss';
+                    totalLoss += Math.abs(finalValue);
+                } else {
+                    selectedBox.className = 'box opened empty';
+                }
+
+                results.push({ content, value: finalValue });
+
+                // تأثير صوتي وبصري
+                selectedBox.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    selectedBox.style.transform = 'scale(1)';
+                }, 300);
+
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+
+            // عرض النتائج النهائية
+            const netResult = totalWin - totalLoss;
+            let resultMessage = '';
+
+            if (netResult > 0) {
+                resultMessage = `🎉 مبروك! ربحت ${netResult} عملة من الصناديق!`;
+                showMessage(resultMessage, 'success');
+            } else if (netResult < 0) {
+                resultMessage = `😔 خسرت ${Math.abs(netResult)} عملة`;
+                showMessage(resultMessage, 'error');
+            } else {
+                resultMessage = `🤷‍♂️ لا ربح ولا خسارة هذه المرة`;
+                showMessage(resultMessage, 'info');
+            }
+
+            // تحديث الرصيد
+            try {
+                if (window.gameEconomy && gameSession) {
+                    const gameResult = {
+                        isWin: netResult > 0,
+                        winAmount: Math.max(0, netResult),
+                        lossAmount: Math.max(0, Math.abs(netResult)) + bet.cost,
+                        totalWin: totalWin,
+                        totalBet: bet.cost,
+                        gameType: 'lucky-boxes',
+                        round: currentRound,
+                        boxesOpened: bet.boxes
+                    };
+
+                    const balanceUpdate = await window.gameEconomy.updatePlayerBalance(gameResult);
+                    if (balanceUpdate.success) {
+                        playerBalance = balanceUpdate.newBalance;
+                        updateBalance(playerBalance);
+                    }
+                } else {
+                    // تحديث محلي
+                    playerBalance += netResult - bet.cost;
+                    updateBalance(playerBalance);
+                }
+            } catch (error) {
+                console.error('خطأ في تحديث الرصيد:', error);
+                showMessage('حدث خطأ في تحديث الرصيد', 'error');
+            }
+
+            // إعادة تفعيل الأزرار
+            setTimeout(() => {
+                document.getElementById('single-btn').disabled = false;
+                document.getElementById('triple-btn').disabled = false;
+                document.getElementById('hammer-btn').disabled = false;
+                isPlaying = false;
+            }, 3000);
+        }
+
+        // دالة العودة للرئيسية
+        function goHome() {
+            addDebug('العودة للصفحة الرئيسية');
+
+            // إنهاء جلسة اللعب إذا كانت موجودة
+            if (window.gameEconomy && gameSession) {
+                window.gameEconomy.endGameSession();
+            }
+
+            window.location.href = '/';
+        }
+
+        // دالة مساعدة للتوافق مع player-header
+        function goToMainPage() {
+            goHome();
+        }
+
+        // تهيئة الصفحة
+        document.addEventListener('DOMContentLoaded', async function() {
+            addDebug('🎮 بدء تحميل الصفحة...');
+
+            try {
+                // تهيئة هيدر اللاعب
+                if (window.playerHeader) {
+                    await window.playerHeader.init();
+                    const headerContainer = document.getElementById('player-header-container');
+                    if (headerContainer) {
+                        window.playerHeader.insertHeader(headerContainer);
+                        addDebug('✅ تم تهيئة هيدر اللاعب');
+
+                        // الحصول على رصيد اللاعب من الهيدر
+                        playerBalance = window.playerHeader.balance || 1000;
+                    }
+                } else {
+                    addDebug('⚠️ playerHeader غير متوفر');
+                }
+
+                // تهيئة النظام الاقتصادي
+                if (window.gameEconomy) {
+                    try {
+                        gameSession = await window.gameEconomy.initGameSession('lucky-boxes', 50);
+                        addDebug('✅ تم تهيئة النظام الاقتصادي');
+
+                        // تحديث الرصيد من النظام الاقتصادي
+                        if (gameSession && gameSession.currentBalance) {
+                            playerBalance = gameSession.currentBalance;
+                            updateBalance(playerBalance);
+                        }
+                    } catch (economyError) {
+                        addDebug(`⚠️ خطأ في تهيئة النظام الاقتصادي: ${economyError.message}`);
+                    }
+                } else {
+                    addDebug('⚠️ gameEconomy غير متوفر');
+                }
+
+                // إنشاء الصناديق الأولية
+                createBoxes();
+
+                // إضافة event listeners للأزرار
+                document.getElementById('single-btn').addEventListener('click', () => playGame('single'));
+                document.getElementById('triple-btn').addEventListener('click', () => playGame('triple'));
+                document.getElementById('hammer-btn').addEventListener('click', () => playGame('hammer'));
+
+                showMessage('مرحباً بك في لعبة صناديق الحظ! 🎁', 'success');
+                addDebug('✅ تم تحميل الصفحة بنجاح');
+
+            } catch (error) {
+                addDebug(`❌ خطأ في التهيئة: ${error.message}`);
+                showMessage('حدث خطأ في تحميل اللعبة', 'error');
+
+                // إنشاء الصناديق على الأقل
+                try {
+                    createBoxes();
+                } catch (boxError) {
+                    addDebug(`❌ فشل في إنشاء الصناديق: ${boxError.message}`);
+                }
+            }
+        });
+
+        // مراقبة الأخطاء
+        window.addEventListener('error', function(event) {
+            addDebug(`❌ خطأ JavaScript: ${event.message} في ${event.filename}:${event.lineno}`);
+        });
+
+        // مراقبة تحميل الملفات الخارجية
+        window.addEventListener('load', function() {
+            addDebug('🔍 فحص الملفات المحملة...');
+
+            if (typeof window.playerHeader === 'undefined') {
+                addDebug('⚠️ player-header.js لم يتم تحميله');
+            } else {
+                addDebug('✅ player-header.js محمل');
+            }
+
+            if (typeof window.gameEconomy === 'undefined') {
+                addDebug('⚠️ game-economy.js لم يتم تحميله');
+            } else {
+                addDebug('✅ game-economy.js محمل');
+            }
+        });
+
+        addDebug('تم تحميل ملف JavaScript');
+    </script>
+</body>
+</html>

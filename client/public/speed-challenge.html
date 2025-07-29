@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحدي السرعة</title>
+    <script src="js/translations.js"></script>
+    <script src="js/game-economy.js"></script>
+    <script src="js/player-header.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2332 25%, #2d3748 50%, #1a365d 75%, #2c5282 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(25px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
+        }
+
+        .game-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .score-display {
+            font-size: 0.9em;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%);
+            border-radius: 15px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .target {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+            transition: all 0.2s ease;
+            animation: pulse 1s infinite;
+        }
+
+        .target:hover {
+            transform: scale(1.1);
+        }
+
+        /* الأهداف السلبية */
+        .target.negative {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+            animation: pulseNegative 1s infinite;
+        }
+
+        .target.bomb {
+            background: linear-gradient(135deg, #1f2937, #374151);
+            box-shadow: 0 8px 25px rgba(31, 41, 55, 0.6);
+            animation: pulseBomb 1.2s infinite;
+        }
+
+        .target.poison {
+            background: linear-gradient(135deg, #059669, #047857);
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
+            animation: pulsePoison 0.8s infinite;
+        }
+
+        /* الأهداف السريعة */
+        .target.fast {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6);
+            animation: pulseFast 0.5s infinite;
+        }
+
+        .target.ultra-fast {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
+            animation: pulseUltraFast 0.3s infinite;
+        }
+
+        .target.flash {
+            background: linear-gradient(135deg, #ec4899, #db2777);
+            box-shadow: 0 8px 25px rgba(236, 72, 153, 0.8);
+            animation: pulseFlash 0.2s infinite;
+        }
+
+        /* الأهداف المموهة */
+        .target.camouflaged {
+            background: linear-gradient(135deg, rgba(75, 85, 99, 0.7), rgba(55, 65, 81, 0.7));
+            box-shadow: 0 4px 15px rgba(75, 85, 99, 0.3);
+            animation: pulseCamouflaged 2s infinite;
+            opacity: 0.6;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .target.camouflaged:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes pulseNegative {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 12px 35px rgba(220, 38, 38, 0.6); }
+        }
+
+        @keyframes pulseBomb {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 25px rgba(31, 41, 55, 0.6); }
+            50% { transform: scale(1.08); box-shadow: 0 15px 40px rgba(31, 41, 55, 0.8); }
+        }
+
+        @keyframes pulsePoison {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4); }
+            50% { transform: scale(1.03); box-shadow: 0 10px 30px rgba(5, 150, 105, 0.6); }
+        }
+
+        @keyframes pulseFast {
+            0%, 100% { transform: scale(1) rotate(0deg); box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6); }
+            50% { transform: scale(1.1) rotate(5deg); box-shadow: 0 12px 35px rgba(245, 158, 11, 0.8); }
+        }
+
+        @keyframes pulseUltraFast {
+            0%, 100% { transform: scale(1) rotate(0deg); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6); }
+            25% { transform: scale(1.15) rotate(-10deg); box-shadow: 0 15px 40px rgba(139, 92, 246, 0.9); }
+            75% { transform: scale(1.15) rotate(10deg); box-shadow: 0 15px 40px rgba(139, 92, 246, 0.9); }
+        }
+
+        @keyframes pulseFlash {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 25px rgba(236, 72, 153, 0.8); opacity: 1; }
+            50% { transform: scale(1.2); box-shadow: 0 20px 50px rgba(236, 72, 153, 1); opacity: 0.8; }
+        }
+
+        @keyframes pulseCamouflaged {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.02); }
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        @keyframes superHit {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(-10deg); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) rotate(5deg); }
+            40% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(-2deg); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.7) rotate(0deg); }
+        }
+
+        @keyframes greatHit {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+            25% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        @keyframes goodHit {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+
+        @keyframes badHit {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(-5deg); }
+            40% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(5deg); }
+            60% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8) rotate(0deg); }
+        }
+
+        /* تعليمات اللعبة القابلة للطي */
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin: 8px 0;
+            text-align: center;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .instructions-header {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 215, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            font-size: 0.9em;
+            color: #ffd700;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .instructions-header:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .instructions-header:active {
+            transform: translateY(0);
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            transition: transform 0.3s ease;
+            color: #ffd700;
+        }
+
+        .toggle-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        .instructions-content {
+            padding: 8px;
+            transition: all 0.3s ease;
+            max-height: 200px;
+            opacity: 1;
+        }
+
+        .instructions-content.collapsed {
+            max-height: 0;
+            padding: 0 8px;
+            opacity: 0;
+        }
+
+        .target-guide {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* رسالة تفعيل الصوت */
+        .audio-notice {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 193, 7, 0.9));
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        .notice-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #1a202c;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .notice-close {
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #1a202c;
+        }
+
+        .notice-close:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .guide-row {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .positive-targets {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .negative-targets {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffc107 100%);
+            border: 2px solid rgba(255, 215, 0, 0.9);
+            border-radius: 10px;
+            padding: 8px 16px;
+            color: #1a202c;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85em;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 8px 0;
+        }
+
+        .stat-item {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: #ccc;
+            margin-top: 3px;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 40, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* وسائل المساعدة */
+        .power-ups {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .power-ups h3 {
+            text-align: center;
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .power-up-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .power-up-btn {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 193, 7, 0.1));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .power-up-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 193, 7, 0.2));
+            border-color: rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+
+        .power-up-icon {
+            font-size: 2em;
+        }
+
+        .power-up-name {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .power-up-cost {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #1a202c;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .power-up-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+
+        .power-up-usage {
+            border-top: 1px solid rgba(255, 215, 0, 0.3);
+            padding-top: 15px;
+        }
+
+        .power-up-usage h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .usage-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .use-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        .use-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+            transform: translateY(-1px);
+        }
+
+        .use-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                margin: 2px;
+                padding: 8px;
+                max-width: 100vw;
+                box-sizing: border-box;
+            }
+
+            .target {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9em;
+            }
+
+            .game-area {
+                height: 60vh;
+                min-height: 300px;
+                margin: 5px 0;
+            }
+
+            .header {
+                margin-bottom: 3px;
+                padding: 4px 6px;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+            .game-title {
+                font-size: 0.9em;
+                order: 1;
+                flex: 1;
+                text-align: center;
+            }
+
+            .score-display {
+                font-size: 0.75em;
+                order: 2;
+            }
+
+            .back-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 1em;
+                order: 0;
+            }
+
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                margin: 4px 0;
+            }
+
+            .stat-item {
+                padding: 4px;
+                border-radius: 6px;
+            }
+
+            .stat-value {
+                font-size: 0.9em;
+            }
+
+            .stat-label {
+                font-size: 0.65em;
+            }
+
+            .instructions-header {
+                font-size: 0.75em;
+                padding: 4px 8px;
+            }
+
+            .instructions-content {
+                font-size: 0.65em;
+                padding: 4px;
+            }
+
+            .guide-row {
+                margin: 2px 0;
+                line-height: 1.2;
+            }
+
+            .controls {
+                gap: 4px;
+                margin: 8px 0;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 0.75em;
+                border-radius: 8px;
+            }
+
+            .power-ups {
+                padding: 10px;
+                margin: 8px 0;
+            }
+
+            .power-ups h3 {
+                font-size: 1em;
+                margin-bottom: 8px;
+            }
+
+            .power-up-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .power-up-btn {
+                padding: 8px;
+                gap: 4px;
+            }
+
+            .power-up-icon {
+                font-size: 1.2em;
+            }
+
+            .power-up-name {
+                font-size: 0.7em;
+            }
+
+            .power-up-cost {
+                font-size: 0.65em;
+                padding: 2px 4px;
+            }
+
+            .usage-buttons {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+
+            .use-btn {
+                padding: 6px;
+                font-size: 0.7em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- معلومات اللاعب -->
+        <div id="player-header-container"></div>
+
+        <div class="header">
+            <button class="back-btn" onclick="goBack()" title="العودة">
+                ←
+            </button>
+            <h1 class="game-title">⚡ تحدي السرعة</h1>
+            <div class="score-display">
+                النقاط: <span id="score">0</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="hits">0</div>
+                <div class="stat-label">إصابات</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="misses">0</div>
+                <div class="stat-label">أخطاء</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="time">30</div>
+                <div class="stat-label">الوقت</div>
+            </div>
+        </div>
+
+        <!-- رسالة تفعيل الصوت -->
+        <div id="audio-notice" class="audio-notice" style="display: none;">
+            <div class="notice-content">
+                <span>🔊 انقر على أي زر لتفعيل الأصوات</span>
+                <button onclick="hideAudioNotice()" class="notice-close">✕</button>
+            </div>
+        </div>
+
+        <!-- تعليمات اللعبة القابلة للطي -->
+        <div class="instructions">
+            <div class="instructions-header" onclick="enableAudio(); toggleInstructions()">
+                <span>🎯 الأهداف</span>
+                <span id="instructions-toggle" class="toggle-icon">▼</span>
+            </div>
+            <div id="instructions-content" class="instructions-content collapsed">
+                <div class="target-guide">
+                    <div class="guide-row positive-targets">
+                        ✨ عادية: 🎯 +10 | ⭐ +15 | 💎 +25 | 🏆 +30
+                    </div>
+                    <div class="guide-row positive-targets">
+                        ⚡ سريعة: ⚡ +20 | 🚀 +35 | 💫 +40
+                    </div>
+                    <div class="guide-row positive-targets">
+                        🔍 مموهة: 🟢 +15 | 🔵 +20 | 🟡 +25
+                    </div>
+                    <div class="guide-row negative-targets">
+                        ⚠️ تجنبها: ❌ -10 | ☠️ -15 | 💣 -20 | 🔴 -25 | ⚫ -30
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-area" id="gameArea">
+            <!-- الأهداف ستظهر هنا -->
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); startGame()">🎮 ابدأ اللعبة</button>
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); resetGame()">🔄 إعادة تعيين</button>
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); pauseGame()">⏸️ إيقاف مؤقت</button>
+            <button class="control-btn" onclick="toggleSound()" id="sound-btn">🔊 الصوت</button>
+        </div>
+
+        <!-- وسائل المساعدة المدفوعة -->
+        <div class="power-ups">
+            <h3>🚀 وسائل المساعدة</h3>
+            <div class="power-up-grid">
+                <button class="power-up-btn" onclick="buyPowerUp('slowTime')" id="slowTime-btn">
+                    <span class="power-up-icon">⏰</span>
+                    <span class="power-up-name">إبطاء الوقت</span>
+                    <span class="power-up-cost">💰 500</span>
+                    <span class="power-up-count" id="slowTime-count">0</span>
+                </button>
+
+                <button class="power-up-btn" onclick="buyPowerUp('doublePoints')" id="doublePoints-btn">
+                    <span class="power-up-icon">💎</span>
+                    <span class="power-up-name">مضاعفة النقاط</span>
+                    <span class="power-up-cost">💰 750</span>
+                    <span class="power-up-count" id="doublePoints-count">0</span>
+                </button>
+
+                <button class="power-up-btn" onclick="buyPowerUp('extraTime')" id="extraTime-btn">
+                    <span class="power-up-icon">⏱️</span>
+                    <span class="power-up-name">وقت إضافي</span>
+                    <span class="power-up-cost">💰 1000</span>
+                    <span class="power-up-count" id="extraTime-count">0</span>
+                </button>
+
+                <button class="power-up-btn" onclick="buyPowerUp('shield')" id="shield-btn">
+                    <span class="power-up-icon">🛡️</span>
+                    <span class="power-up-name">درع الحماية</span>
+                    <span class="power-up-cost">💰 1200</span>
+                    <span class="power-up-count" id="shield-count">0</span>
+                </button>
+            </div>
+
+            <!-- أزرار استخدام وسائل المساعدة -->
+            <div class="power-up-usage" id="power-up-usage" style="display: none;">
+                <h4>استخدم وسائل المساعدة:</h4>
+                <div class="usage-buttons">
+                    <button class="use-btn" onclick="usePowerUp('slowTime')" id="use-slowTime" disabled>
+                        ⏰ إبطاء الوقت (<span id="slowTime-owned">0</span>)
+                    </button>
+                    <button class="use-btn" onclick="usePowerUp('doublePoints')" id="use-doublePoints" disabled>
+                        💎 مضاعفة النقاط (<span id="doublePoints-owned">0</span>)
+                    </button>
+                    <button class="use-btn" onclick="usePowerUp('extraTime')" id="use-extraTime" disabled>
+                        ⏱️ وقت إضافي (<span id="extraTime-owned">0</span>)
+                    </button>
+                    <button class="use-btn" onclick="usePowerUp('shield')" id="use-shield" disabled>
+                        🛡️ درع الحماية (<span id="shield-owned">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>انتهت اللعبة! 🎯</h2>
+            <p>النقاط النهائية: <span id="finalScore">0</span></p>
+            <p>الإصابات: <span id="finalHits">0</span></p>
+            <p>الدقة: <span id="accuracy">0%</span></p>
+            <button class="control-btn" onclick="resetGame()" style="margin-top: 20px;">
+                🎮 العب مرة أخرى
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            score: 0,
+            hits: 0,
+            misses: 0,
+            timeLeft: 30,
+            isPlaying: false,
+            isPaused: false,
+            gameTimer: null,
+            spawnTimer: null,
+            economySession: null,
+            betAmount: 20, // تكلفة اللعب
+            soundEnabled: true, // تفعيل الأصوات
+            powerUps: {
+                slowTime: 0,
+                doublePoints: 0,
+                extraTime: 0,
+                shield: 0
+            },
+            activePowerUps: {
+                slowTime: false,
+                doublePoints: false,
+                shield: false
+            },
+            powerUpTimers: {}
+        };
+
+        // نظام الأصوات باستخدام Web Audio API
+        let audioContext;
+        let audioInitialized = false;
+
+        // تهيئة نظام الصوت
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('🔊 تم تهيئة نظام الصوت');
+            } catch (error) {
+                console.log('🔇 Web Audio API غير مدعوم');
+                gameState.soundEnabled = false;
+            }
+        }
+
+        // تفعيل AudioContext عند أول تفاعل
+        function enableAudio() {
+            if (!audioInitialized && audioContext) {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        audioInitialized = true;
+                        console.log('🔊 تم تفعيل نظام الصوت');
+                        hideAudioNotice();
+                        // تشغيل صوت تأكيد
+                        setTimeout(() => playSound('click'), 100);
+                    });
+                } else {
+                    audioInitialized = true;
+                    console.log('🔊 نظام الصوت جاهز');
+                    hideAudioNotice();
+                }
+            }
+        }
+
+        // دالة توليد الأصوات
+        function playSound(type) {
+            if (!gameState.soundEnabled || !audioContext) return;
+
+            // تفعيل الصوت إذا لم يكن مفعلاً
+            if (!audioInitialized) {
+                enableAudio();
+                return;
+            }
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // تحديد نوع الصوت حسب الحدث
+                switch(type) {
+                    case 'click':
+                        // صوت نقرة عادية
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'hit-positive':
+                        // صوت إصابة إيجابية
+                        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.15);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                        oscillator.type = 'triangle';
+                        break;
+
+                    case 'hit-negative':
+                        // صوت إصابة سلبية
+                        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.2);
+                        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        oscillator.type = 'sawtooth';
+                        break;
+
+                    case 'game-start':
+                        // صوت بداية اللعبة
+                        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        oscillator.type = 'square';
+                        break;
+
+                    case 'game-end':
+                        // صوت نهاية اللعبة
+                        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(220, audioContext.currentTime + 0.5);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'countdown':
+                        // صوت العد التنازلي
+                        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.type = 'square';
+                        break;
+
+                    default:
+                        return;
+                }
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+
+            } catch (error) {
+                console.log('🔇 خطأ في تشغيل الصوت');
+            }
+        }
+
+        function goBack() {
+            window.close();
+            window.history.back();
+        }
+
+        // دالة تبديل الصوت
+        function toggleSound() {
+            // تفعيل الصوت أولاً
+            enableAudio();
+
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const soundBtn = document.getElementById('sound-btn');
+
+            if (gameState.soundEnabled) {
+                soundBtn.textContent = '🔊 الصوت';
+                soundBtn.style.opacity = '1';
+                // تشغيل صوت تأكيد بعد تأخير قصير
+                setTimeout(() => playSound('click'), 100);
+            } else {
+                soundBtn.textContent = '🔇 صامت';
+                soundBtn.style.opacity = '0.6';
+            }
+
+            // حفظ التفضيل
+            localStorage.setItem('speed-challenge-sound-enabled', gameState.soundEnabled);
+        }
+
+        // استعادة إعدادات الصوت
+        function restoreSoundSettings() {
+            const savedSetting = localStorage.getItem('speed-challenge-sound-enabled');
+            if (savedSetting !== null) {
+                gameState.soundEnabled = savedSetting === 'true';
+            }
+
+            const soundBtn = document.getElementById('sound-btn');
+            if (gameState.soundEnabled) {
+                soundBtn.textContent = '🔊 الصوت';
+                soundBtn.style.opacity = '1';
+            } else {
+                soundBtn.textContent = '🔇 صامت';
+                soundBtn.style.opacity = '0.6';
+            }
+
+            // إظهار رسالة تفعيل الصوت
+            showAudioNotice();
+        }
+
+        // إظهار رسالة تفعيل الصوت
+        function showAudioNotice() {
+            if (gameState.soundEnabled && !audioInitialized) {
+                const notice = document.getElementById('audio-notice');
+                if (notice) {
+                    notice.style.display = 'block';
+                }
+            }
+        }
+
+        // إخفاء رسالة تفعيل الصوت
+        function hideAudioNotice() {
+            const notice = document.getElementById('audio-notice');
+            if (notice) {
+                notice.style.display = 'none';
+            }
+        }
+
+        // وسائل المساعدة المدفوعة
+        const powerUpPrices = {
+            slowTime: 500,
+            doublePoints: 750,
+            extraTime: 1000,
+            shield: 1200
+        };
+
+        // شراء وسيلة مساعدة
+        async function buyPowerUp(type) {
+            const price = powerUpPrices[type];
+
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.canAfford === 'function') {
+                    const canAfford = window.gameEconomy.canAfford(price);
+                    if (!canAfford.canAfford) {
+                        alert(`💰 رصيدك غير كافي! تحتاج ${price} عملة ذهبية`);
+                        return;
+                    }
+
+                    // خصم المبلغ
+                    const deductResult = await window.gameEconomy.deductBalance(price);
+                    if (deductResult && deductResult.success) {
+                        gameState.powerUps[type]++;
+                        updatePowerUpDisplay();
+
+                        // تحديث الهيدر
+                        if (window.playerHeader && typeof window.playerHeader.updateBalance === 'function') {
+                            window.playerHeader.updateBalance(deductResult.newBalance);
+                        }
+
+                        playSound('click');
+                        alert(`✅ تم شراء ${getPowerUpName(type)} بنجاح!`);
+                    }
+                } else {
+                    // وضع التدريب - شراء مجاني
+                    gameState.powerUps[type]++;
+                    updatePowerUpDisplay();
+                    playSound('click');
+                    alert(`✅ تم شراء ${getPowerUpName(type)} (وضع التدريب)`);
+                }
+            } catch (error) {
+                console.error('خطأ في شراء وسيلة المساعدة:', error);
+                alert('حدث خطأ أثناء الشراء. حاول مرة أخرى.');
+            }
+        }
+
+        // استخدام وسيلة مساعدة
+        function usePowerUp(type) {
+            if (gameState.powerUps[type] <= 0) {
+                alert('ليس لديك هذه الوسيلة!');
+                return;
+            }
+
+            if (!gameState.isPlaying) {
+                alert('يجب أن تكون اللعبة قيد التشغيل لاستخدام وسائل المساعدة!');
+                return;
+            }
+
+            gameState.powerUps[type]--;
+            updatePowerUpDisplay();
+            playSound('click');
+
+            switch(type) {
+                case 'slowTime':
+                    activateSlowTime();
+                    break;
+                case 'doublePoints':
+                    activateDoublePoints();
+                    break;
+                case 'extraTime':
+                    activateExtraTime();
+                    break;
+                case 'shield':
+                    activateShield();
+                    break;
+            }
+        }
+
+        function getPowerUpName(type) {
+            const names = {
+                slowTime: 'إبطاء الوقت',
+                doublePoints: 'مضاعفة النقاط',
+                extraTime: 'وقت إضافي',
+                shield: 'درع الحماية'
+            };
+            return names[type] || type;
+        }
+
+        // دالة طي وفتح منطقة التعليمات
+        function toggleInstructions() {
+            // تشغيل صوت النقر
+            playSound('click');
+
+            const content = document.getElementById('instructions-content');
+            const toggleIcon = document.getElementById('instructions-toggle');
+
+            if (content.classList.contains('collapsed')) {
+                // فتح التعليمات
+                content.classList.remove('collapsed');
+                toggleIcon.classList.add('rotated');
+                toggleIcon.textContent = '▲';
+                localStorage.setItem('speed-challenge-instructions-collapsed', 'false');
+            } else {
+                // طي التعليمات
+                content.classList.add('collapsed');
+                toggleIcon.classList.remove('rotated');
+                toggleIcon.textContent = '▼';
+                localStorage.setItem('speed-challenge-instructions-collapsed', 'true');
+            }
+        }
+
+        // استعادة حالة التعليمات عند تحميل الصفحة
+        function restoreInstructionsState() {
+            const isCollapsed = localStorage.getItem('speed-challenge-instructions-collapsed') === 'true';
+            const content = document.getElementById('instructions-content');
+            const toggleIcon = document.getElementById('instructions-toggle');
+
+            if (isCollapsed) {
+                content.classList.add('collapsed');
+                toggleIcon.classList.remove('rotated');
+                toggleIcon.textContent = '▼';
+            } else {
+                content.classList.remove('collapsed');
+                toggleIcon.classList.add('rotated');
+                toggleIcon.textContent = '▲';
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('hits').textContent = gameState.hits;
+            document.getElementById('misses').textContent = gameState.misses;
+            document.getElementById('time').textContent = gameState.timeLeft;
+        }
+
+        // دالة المزامنة الفورية للرصيد لمنع الغش
+        async function syncBalanceRealTime(points, type) {
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.updatePlayerBalance === 'function') {
+                    // إنشاء نتيجة مؤقتة للنقطة الواحدة
+                    const tempResult = {
+                        isWin: points > 0,
+                        winAmount: points > 0 ? Math.abs(points) : 0,
+                        lossAmount: points < 0 ? Math.abs(points) : 0,
+                        playerScore: gameState.score,
+                        skillFactor: 1.0,
+                        economicFactor: 1.0,
+                        probability: type === 'positive' ? 0.7 : 0.3,
+                        realTimeSync: true // علامة للمزامنة الفورية
+                    };
+
+                    const balanceUpdate = await window.gameEconomy.updatePlayerBalance(tempResult);
+                    if (balanceUpdate && balanceUpdate.success) {
+                        // تحديث عرض الرصيد في الهيدر فورياً
+                        if (window.playerHeader && typeof window.playerHeader.updateBalance === 'function') {
+                            window.playerHeader.updateBalance(balanceUpdate.newBalance);
+                        }
+
+                        // تسجيل المزامنة للمراقبة
+                        console.log(`🔄 مزامنة فورية: ${points > 0 ? '+' : ''}${points} | رصيد جديد: ${balanceUpdate.newBalance}`);
+                    }
+                }
+            } catch (error) {
+                // في حالة فشل المزامنة، إيقاف اللعبة لمنع الغش
+                console.error('⚠️ فشل في المزامنة الفورية - إيقاف اللعبة');
+                gameState.isPlaying = false;
+                clearInterval(gameState.gameTimer);
+                clearTimeout(gameState.spawnTimer);
+                alert('حدث خطأ في الاتصال. تم إيقاف اللعبة للحفاظ على الأمان.');
+            }
+        }
+
+        function showTargetMessage(emoji, points, type) {
+            const messageDiv = document.createElement('div');
+
+            // تحديد اللون والتأثير حسب قيمة النقاط
+            let bgColor, textColor, animation;
+            if (points >= 30) {
+                bgColor = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
+                textColor = '#fff';
+                animation = 'superHit 1.2s ease-in-out';
+            } else if (points >= 20) {
+                bgColor = 'linear-gradient(135deg, #34d399, #10b981)';
+                textColor = '#fff';
+                animation = 'greatHit 1s ease-in-out';
+            } else if (points > 0) {
+                bgColor = 'linear-gradient(135deg, #60a5fa, #3b82f6)';
+                textColor = '#fff';
+                animation = 'goodHit 0.8s ease-in-out';
+            } else {
+                bgColor = 'linear-gradient(135deg, #f87171, #ef4444)';
+                textColor = '#fff';
+                animation = 'badHit 1s ease-in-out';
+            }
+
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 40%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: ${bgColor};
+                color: ${textColor};
+                padding: 12px 20px;
+                border-radius: 15px;
+                font-size: 1.1em;
+                font-weight: bold;
+                z-index: 1000;
+                animation: ${animation};
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+                border: 2px solid rgba(255, 255, 255, 0.3);
+            `;
+
+            messageDiv.textContent = `${emoji} ${points > 0 ? '+' : ''}${points}`;
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 1200);
+        }
+
+        function createTarget() {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            const gameArea = document.getElementById('gameArea');
+            const target = document.createElement('div');
+
+            // تحديد نوع الهدف مع أهداف مموهة ومتنوعة
+            const targetTypes = [
+                // أهداف إيجابية عادية (40%) - جوائز بالمئات
+                { type: 'positive', emoji: '🎯', points: 100, class: '', probability: 0.15, duration: 2000 },
+                { type: 'positive', emoji: '⭐', points: 250, class: '', probability: 0.12, duration: 1800 },
+                { type: 'positive', emoji: '💎', points: 500, class: '', probability: 0.08, duration: 1500 },
+                { type: 'positive', emoji: '🏆', points: 750, class: '', probability: 0.05, duration: 1200 },
+
+                // أهداف إيجابية سريعة (20%) - جوائز أعلى للصعوبة
+                { type: 'positive', emoji: '⚡', points: 400, class: 'fast', probability: 0.10, duration: 800 },
+                { type: 'positive', emoji: '🚀', points: 800, class: 'ultra-fast', probability: 0.05, duration: 600 },
+                { type: 'positive', emoji: '💫', points: 1200, class: 'flash', probability: 0.05, duration: 500 },
+
+                // أهداف مموهة (15%) - جوائز متوسطة
+                { type: 'positive', emoji: '🟢', points: 300, class: 'camouflaged', probability: 0.08, duration: 1500 },
+                { type: 'positive', emoji: '🔵', points: 450, class: 'camouflaged', probability: 0.04, duration: 1200 },
+                { type: 'positive', emoji: '🟡', points: 600, class: 'camouflaged', probability: 0.03, duration: 1000 },
+
+                // أهداف سلبية عادية (15%) - خسائر كبيرة
+                { type: 'negative', emoji: '💣', points: -500, class: 'bomb', probability: 0.08, duration: 2200 },
+                { type: 'negative', emoji: '☠️', points: -350, class: 'poison', probability: 0.05, duration: 2000 },
+                { type: 'negative', emoji: '❌', points: -200, class: 'negative', probability: 0.02, duration: 1800 },
+
+                // أهداف سلبية مموهة (10%) - خسائر أكبر
+                { type: 'negative', emoji: '🔴', points: -750, class: 'camouflaged bomb', probability: 0.05, duration: 1800 },
+                { type: 'negative', emoji: '⚫', points: -1000, class: 'camouflaged poison', probability: 0.03, duration: 1600 },
+                { type: 'negative', emoji: '🟤', points: -300, class: 'camouflaged negative', probability: 0.02, duration: 1400 }
+            ];
+
+            // اختيار نوع الهدف بناءً على الاحتمالات
+            const random = Math.random();
+            let cumulativeProbability = 0;
+            let selectedTarget = targetTypes[0];
+
+            for (const targetType of targetTypes) {
+                cumulativeProbability += targetType.probability;
+                if (random <= cumulativeProbability) {
+                    selectedTarget = targetType;
+                    break;
+                }
+            }
+
+            // تطبيق خصائص الهدف
+            target.className = `target ${selectedTarget.class}`;
+            target.textContent = selectedTarget.emoji;
+            target.dataset.points = selectedTarget.points;
+            target.dataset.type = selectedTarget.type;
+
+            // موضع عشوائي
+            const maxX = gameArea.clientWidth - 45;
+            const maxY = gameArea.clientHeight - 45;
+            target.style.left = Math.random() * maxX + 'px';
+            target.style.top = Math.random() * maxY + 'px';
+
+            // إضافة مستمع النقر
+            target.addEventListener('click', async () => {
+                const points = parseInt(target.dataset.points);
+                const type = target.dataset.type;
+
+                // تشغيل صوت الإصابة
+                if (points > 0) {
+                    playSound('hit-positive');
+                } else {
+                    playSound('hit-negative');
+                }
+
+                // تحديث النقاط مع منع النقاط السلبية من جعل النتيجة أقل من صفر
+                gameState.score = Math.max(0, gameState.score + points);
+                gameState.hits++;
+
+                // مزامنة فورية مع الرصيد لمنع الغش
+                await syncBalanceRealTime(points, type);
+
+                // عرض رسالة حسب نوع الهدف
+                showTargetMessage(selectedTarget.emoji, points, type);
+
+                target.remove();
+                updateDisplay();
+            });
+
+            gameArea.appendChild(target);
+
+            // إزالة الهدف بعد المدة المحددة
+            setTimeout(() => {
+                if (target.parentNode) {
+                    target.remove();
+                    gameState.misses++;
+                    updateDisplay();
+                }
+            }, selectedTarget.duration);
+        }
+
+        async function startGame() {
+            if (gameState.isPlaying) return;
+
+            // التحقق من النظام الاقتصادي بصمت
+            let economyAvailable = false;
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.canPlay === 'function') {
+                    const canPlayCheck = window.gameEconomy.canPlay(gameState.betAmount);
+                    if (!canPlayCheck.canPlay) {
+                        alert(canPlayCheck.reason);
+                        return;
+                    }
+                    economyAvailable = true;
+                } else {
+                    // تشغيل اللعبة في وضع التدريب بدون نظام اقتصادي
+                    console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                    economyAvailable = false;
+                }
+            } catch (error) {
+                // في حالة الخطأ، تشغيل اللعبة بدون نظام اقتصادي
+                console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                economyAvailable = false;
+            }
+
+            gameState.isPlaying = true;
+            gameState.isPaused = false;
+            gameState.timeLeft = 30;
+
+            // تشغيل صوت بداية اللعبة
+            playSound('game-start');
+            
+            // مؤقت اللعبة
+            gameState.gameTimer = setInterval(() => {
+                if (!gameState.isPaused) {
+                    gameState.timeLeft--;
+                    updateDisplay();
+
+                    // تشغيل صوت العد التنازلي في آخر 5 ثوان
+                    if (gameState.timeLeft <= 5 && gameState.timeLeft > 0) {
+                        playSound('countdown');
+                    }
+
+                    if (gameState.timeLeft <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+            
+            // إنشاء الأهداف بسرعة متزايدة
+            let spawnInterval = 1200; // البداية بـ 1.2 ثانية
+
+            function spawnTargets() {
+                if (!gameState.isPaused && gameState.isPlaying) {
+                    createTarget();
+
+                    // تقليل الفترة تدريجياً لزيادة السرعة
+                    spawnInterval = Math.max(400, spawnInterval - 20);
+
+                    // أحياناً إنشاء هدفين في نفس الوقت للتشويق
+                    if (Math.random() < 0.3 && gameState.timeLeft > 10) {
+                        setTimeout(() => {
+                            if (gameState.isPlaying && !gameState.isPaused) {
+                                createTarget();
+                            }
+                        }, 200);
+                    }
+
+                    gameState.spawnTimer = setTimeout(spawnTargets, spawnInterval);
+                }
+            }
+
+            spawnTargets();
+        }
+
+        function pauseGame() {
+            gameState.isPaused = !gameState.isPaused;
+        }
+
+        async function endGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.gameTimer);
+            clearTimeout(gameState.spawnTimer);
+
+            // تشغيل صوت نهاية اللعبة
+            playSound('game-end');
+
+            // مسح الأهداف المتبقية
+            document.getElementById('gameArea').innerHTML = '';
+
+            // حساب النتائج باستخدام النظام الاقتصادي
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.calculateGameResult === 'function') {
+                    const economicResult = window.gameEconomy.calculateGameResult(
+                        gameState.score,
+                        'speed-challenge',
+                        gameState.betAmount
+                    );
+
+                    const gameResult = {
+                        isWin: economicResult.isWin,
+                        winAmount: economicResult.winAmount,
+                        lossAmount: gameState.betAmount,
+                        playerScore: gameState.score,
+                        skillFactor: economicResult.skillFactor,
+                        economicFactor: economicResult.economicFactor,
+                        probability: economicResult.probability
+                    };
+
+                    // لا نحدث الرصيد هنا لأنه تم تحديثه فورياً أثناء اللعب
+                    console.log(`🎯 النتيجة النهائية: ${gameState.score} نقطة | الإصابات: ${gameState.hits} | الأخطاء: ${gameState.misses}`);
+                    console.log('💰 الرصيد محدث فورياً أثناء اللعب - لا حاجة لتحديث إضافي');
+                } else {
+                    // النظام الاقتصادي غير متوفر - تشغيل اللعبة بدون ربط اقتصادي
+                    console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                }
+            } catch (error) {
+                // التعامل مع الأخطاء بصمت - لا تظهر للاعب
+                console.log('🎮 تم إنهاء اللعبة بنجاح');
+            }
+
+            // عرض النتائج
+            const accuracy = gameState.hits + gameState.misses > 0 ?
+                Math.round((gameState.hits / (gameState.hits + gameState.misses)) * 100) : 0;
+
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalHits').textContent = gameState.hits;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function resetGame() {
+            gameState = {
+                score: 0,
+                hits: 0,
+                misses: 0,
+                timeLeft: 30,
+                isPlaying: false,
+                isPaused: false,
+                gameTimer: null,
+                spawnTimer: null
+            };
+            
+            clearInterval(gameState.gameTimer);
+            clearTimeout(gameState.spawnTimer);
+            document.getElementById('gameArea').innerHTML = '';
+            document.getElementById('gameOver').style.display = 'none';
+            updateDisplay();
+        }
+
+        // تهيئة النظام الاقتصادي
+        async function initializeEconomy() {
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.initializeGameSession === 'function') {
+                    gameState.economySession = await window.gameEconomy.initializeGameSession('speed-challenge', gameState.betAmount);
+                    console.log('✅ تم تهيئة النظام الاقتصادي لتحدي السرعة');
+                } else {
+                    console.log('🎮 النظام الاقتصادي غير متوفر - وضع التدريب');
+                }
+            } catch (error) {
+                // التعامل مع الأخطاء بصمت
+                console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                gameState.economySession = null;
+            }
+        }
+
+        // تطبيق الترجمات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', async function() {
+            // تهيئة نظام الصوت
+            initAudio();
+
+            // تهيئة هيدر اللاعب
+            await window.playerHeader.init();
+            const headerContainer = document.getElementById('player-header-container');
+            if (headerContainer) {
+                window.playerHeader.insertHeader(headerContainer);
+            }
+
+            // استعادة حالة التعليمات والصوت
+            restoreInstructionsState();
+            restoreSoundSettings();
+
+            if (window.languageManager) {
+                window.languageManager.translatePage();
+            }
+            await initializeEconomy();
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>

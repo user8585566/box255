@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة الذاكرة</title>
+    <script src="js/translations.js"></script>
+    <script src="js/game-economy.js"></script>
+    <script src="js/player-header.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2332 25%, #2d3748 50%, #1a365d 75%, #2c5282 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(25px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
+        }
+
+        .game-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .score-display {
+            font-size: 1.2em;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .memory-card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .memory-card:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 215, 0, 0.6);
+        }
+
+        .memory-card.flipped {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #1a202c;
+            transform: rotateY(180deg);
+        }
+
+        .memory-card.matched {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border-color: #10b981;
+        }
+
+        .memory-card.hidden {
+            background: linear-gradient(135deg, rgba(100, 100, 100, 0.3) 0%, rgba(80, 80, 80, 0.2) 100%);
+            color: #cbd5e0;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffc107 100%);
+            border: 3px solid rgba(255, 215, 0, 0.9);
+            border-radius: 15px;
+            padding: 12px 24px;
+            color: #1a202c;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        .game-complete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 40, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* واجهة العملات */
+        .coins-display {
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .coin-counter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .coin-icon {
+            font-size: 1.5em;
+        }
+
+        #coins-count {
+            color: #ffd700;
+            font-size: 1.3em;
+        }
+
+        .coin-label {
+            color: #e2e8f0;
+        }
+
+        .reveal-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.9em;
+            color: #cbd5e0;
+        }
+
+        /* وسائل المساعدة */
+        .power-ups {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .power-ups h3 {
+            text-align: center;
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .power-up-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .power-up-btn {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 193, 7, 0.1));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .power-up-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 193, 7, 0.2));
+            border-color: rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+
+        .power-up-icon {
+            font-size: 1.8em;
+        }
+
+        .power-up-name {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .power-up-cost {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #1a202c;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        /* تأثيرات وسائل المساعدة */
+        .memory-card.peek {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #ffd700;
+            animation: glow 0.5s ease-in-out infinite alternate;
+        }
+
+        .memory-card.hint {
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+            to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.9); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* تحسين عرض الوقت */
+        .stat-item:nth-child(3) .stat-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                margin: 2px;
+                padding: 8px;
+                max-width: 100vw;
+                box-sizing: border-box;
+            }
+
+            .header {
+                margin-bottom: 5px;
+                padding: 4px 6px;
+                flex-wrap: wrap;
+            }
+
+            .game-title {
+                font-size: 0.9em;
+                order: 1;
+                flex: 1;
+                text-align: center;
+            }
+
+            .back-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 1em;
+                order: 0;
+            }
+
+            .coins-display {
+                padding: 8px;
+                margin: 8px 0;
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .coin-counter {
+                font-size: 1em;
+                gap: 6px;
+            }
+
+            #coins-count {
+                font-size: 1.1em;
+            }
+
+            .reveal-info {
+                font-size: 0.75em;
+                gap: 3px;
+            }
+
+            .power-ups {
+                padding: 8px;
+                margin: 8px 0;
+            }
+
+            .power-ups h3 {
+                font-size: 1em;
+                margin-bottom: 8px;
+            }
+
+            .power-up-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .power-up-btn {
+                padding: 8px;
+                gap: 4px;
+            }
+
+            .power-up-icon {
+                font-size: 1.2em;
+            }
+
+            .power-up-name {
+                font-size: 0.7em;
+            }
+
+            .power-up-cost {
+                font-size: 0.65em;
+                padding: 2px 4px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 4px;
+                margin: 5px 0;
+            }
+
+            .stat-item {
+                padding: 4px 6px;
+                border-radius: 6px;
+            }
+
+            .stat-value {
+                font-size: 1em;
+            }
+
+            .stat-label {
+                font-size: 0.7em;
+            }
+
+            .game-board {
+                max-width: 100%;
+                gap: 6px;
+                margin: 10px 0;
+            }
+
+            .memory-card {
+                font-size: 1.2em;
+                width: 60px;
+                height: 60px;
+            }
+
+            .controls {
+                gap: 4px;
+                margin: 8px 0;
+                flex-wrap: wrap;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 0.75em;
+                border-radius: 8px;
+                flex: 1;
+                min-width: 100px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .power-up-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .power-up-btn {
+                padding: 6px;
+                gap: 3px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+
+            .game-board {
+                gap: 4px;
+            }
+
+            .memory-card {
+                font-size: 1em;
+                width: 50px;
+                height: 50px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .control-btn {
+                width: 100%;
+                max-width: 200px;
+                margin: 2px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- معلومات اللاعب -->
+        <div id="player-header-container"></div>
+
+        <div class="header">
+            <button class="back-btn" onclick="goBack()" title="العودة">
+                ←
+            </button>
+            <h1 class="game-title">🧠 لعبة الذاكرة</h1>
+            <div class="score-display">
+                النقاط: <span id="score">0</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="moves">0</div>
+                <div class="stat-label">الحركات</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="matches">0</div>
+                <div class="stat-label">المطابقات</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="time">00:00</div>
+                <div class="stat-label">الوقت</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="score">0</div>
+                <div class="stat-label">النقاط</div>
+            </div>
+        </div>
+
+        <div class="game-board" id="gameBoard">
+            <!-- البطاقات ستظهر هنا -->
+        </div>
+
+        <!-- واجهة العملات -->
+        <div class="coins-display">
+            <div class="coin-counter">
+                <span class="coin-icon">💰</span>
+                <span id="coins-count">1000</span>
+                <span class="coin-label">عملة</span>
+            </div>
+            <div class="reveal-info">
+                <span>🔍 كشف البطاقة: 50 عملة</span>
+                <span>🎯 مكافأة المطابقة: 200 عملة</span>
+            </div>
+        </div>
+
+        <!-- وسائل المساعدة -->
+        <div class="power-ups">
+            <h3>🚀 وسائل المساعدة</h3>
+            <div class="power-up-grid">
+                <button class="power-up-btn" onclick="buyPowerUp('peek')" id="peek-btn">
+                    <span class="power-up-icon">👁️</span>
+                    <span class="power-up-name">نظرة خاطفة</span>
+                    <span class="power-up-cost">💰 300</span>
+                </button>
+
+                <button class="power-up-btn" onclick="buyPowerUp('hint')" id="hint-btn">
+                    <span class="power-up-icon">💡</span>
+                    <span class="power-up-name">تلميح ذكي</span>
+                    <span class="power-up-cost">💰 500</span>
+                </button>
+
+                <button class="power-up-btn" onclick="buyPowerUp('shuffle')" id="shuffle-btn">
+                    <span class="power-up-icon">🔄</span>
+                    <span class="power-up-name">خلط البطاقات</span>
+                    <span class="power-up-cost">💰 200</span>
+                </button>
+
+                <button class="power-up-btn" onclick="buyPowerUp('extraTime')" id="extraTime-btn">
+                    <span class="power-up-icon">⏰</span>
+                    <span class="power-up-name">وقت إضافي</span>
+                    <span class="power-up-cost">💰 400</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); startGame()">🎮 لعبة جديدة</button>
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); resetGame()">🔄 إعادة تعيين</button>
+            <button class="control-btn" onclick="updatePlayerBalance()">💰 تحديث الرصيد</button>
+            <button class="control-btn" onclick="toggleSound()" id="sound-btn">🔊 الصوت</button>
+        </div>
+
+        <div class="game-complete" id="gameComplete">
+            <h2>🎉 مبروك! أكملت اللعبة!</h2>
+            <p>النقاط النهائية: <span id="finalScore">0</span></p>
+            <p>عدد الحركات: <span id="finalMoves">0</span></p>
+            <p>الوقت المستغرق: <span id="finalTime">0</span> ثانية</p>
+            <button class="control-btn" onclick="startGame()" style="margin-top: 20px;">
+                🎮 العب مرة أخرى
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            score: 0,
+            moves: 0,
+            matches: 0,
+            time: 0,
+            isPlaying: false,
+            timer: null,
+            flippedCards: [],
+            matchedPairs: 0,
+            cards: [],
+            economySession: null,
+            betAmount: 25, // تكلفة اللعب
+            soundEnabled: true, // تفعيل الأصوات
+            coins: 1000, // عملات البداية
+            cardRevealCost: 50, // تكلفة كشف البطاقة
+            matchReward: 200, // مكافأة المطابقة
+            perfectGameBonus: 1000, // مكافأة اللعبة المثالية
+            revealedCards: new Set() // البطاقات المكشوفة
+        };
+
+        // نظام الأصوات
+        let audioContext;
+        let audioInitialized = false;
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('🔊 تم تهيئة نظام الصوت - لعبة الذاكرة');
+            } catch (error) {
+                console.log('🔇 Web Audio API غير مدعوم');
+                gameState.soundEnabled = false;
+            }
+        }
+
+        function enableAudio() {
+            if (!audioInitialized && audioContext) {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        audioInitialized = true;
+                        console.log('🔊 تم تفعيل نظام الصوت - لعبة الذاكرة');
+                        setTimeout(() => playSound('click'), 100);
+                    });
+                } else {
+                    audioInitialized = true;
+                    console.log('🔊 نظام الصوت جاهز - لعبة الذاكرة');
+                }
+            }
+        }
+
+        function playSound(type) {
+            if (!gameState.soundEnabled || !audioContext) return;
+
+            if (!audioInitialized) {
+                enableAudio();
+                return;
+            }
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                switch(type) {
+                    case 'click':
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'flip':
+                        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.15);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                        oscillator.type = 'triangle';
+                        break;
+
+                    case 'match':
+                        oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(784, audioContext.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        oscillator.type = 'square';
+                        break;
+
+                    case 'mismatch':
+                        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.2);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        oscillator.type = 'sawtooth';
+                        break;
+
+                    case 'win':
+                        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.5);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'coin':
+                        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(1500, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.type = 'square';
+                        break;
+
+                    default:
+                        return;
+                }
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+
+            } catch (error) {
+                console.log('🔇 خطأ في تشغيل الصوت');
+            }
+        }
+
+        function toggleSound() {
+            enableAudio();
+
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const soundBtn = document.getElementById('sound-btn');
+
+            if (gameState.soundEnabled) {
+                soundBtn.textContent = '🔊 الصوت';
+                soundBtn.style.opacity = '1';
+                setTimeout(() => playSound('click'), 100);
+            } else {
+                soundBtn.textContent = '🔇 صامت';
+                soundBtn.style.opacity = '0.6';
+            }
+
+            localStorage.setItem('memory-match-sound-enabled', gameState.soundEnabled);
+        }
+
+        // نظام العملات ووسائل المساعدة
+        function updateCoinsDisplay() {
+            document.getElementById('coins-count').textContent = gameState.coins;
+        }
+
+        function canAffordReveal() {
+            return gameState.coins >= gameState.cardRevealCost;
+        }
+
+        function revealCard(cardElement, cardIndex) {
+            console.log(`🔍 محاولة كشف البطاقة - الرصيد: ${gameState.coins}, التكلفة: ${gameState.cardRevealCost}`);
+
+            if (gameState.coins >= gameState.cardRevealCost) {
+                gameState.coins -= gameState.cardRevealCost;
+                updateCoinsDisplay();
+                playSound('coin');
+                console.log(`✅ تم خصم ${gameState.cardRevealCost} عملة، الرصيد الجديد: ${gameState.coins}`);
+                return true;
+            } else {
+                const needed = gameState.cardRevealCost - gameState.coins;
+                showMessage(`💰 ليس لديك عملات كافية! لديك ${gameState.coins} وتحتاج ${needed} عملة إضافية`, 'error');
+                console.log(`❌ رصيد غير كافي: ${gameState.coins} < ${gameState.cardRevealCost}`);
+                return false;
+            }
+        }
+
+        function rewardMatch() {
+            gameState.coins += gameState.matchReward;
+            updateCoinsDisplay();
+            playSound('match');
+        }
+
+        // وسائل المساعدة
+        const powerUpPrices = {
+            peek: 300,
+            hint: 500,
+            shuffle: 200,
+            extraTime: 400
+        };
+
+        async function buyPowerUp(type) {
+            const price = powerUpPrices[type];
+
+            if (gameState.coins < price) {
+                alert(`💰 ليس لديك عملات كافية! تحتاج ${price} عملة`);
+                return;
+            }
+
+            gameState.coins -= price;
+            updateCoinsDisplay();
+            playSound('click');
+
+            switch(type) {
+                case 'peek':
+                    usePeek();
+                    break;
+                case 'hint':
+                    useHint();
+                    break;
+                case 'shuffle':
+                    useShuffle();
+                    break;
+                case 'extraTime':
+                    useExtraTime();
+                    break;
+            }
+        }
+
+        function usePeek() {
+            // إظهار جميع البطاقات لثانيتين
+            const cards = document.querySelectorAll('.memory-card');
+            cards.forEach(card => {
+                if (!card.classList.contains('flipped') && !card.classList.contains('matched')) {
+                    card.classList.add('peek');
+                    const emoji = gameState.cards[parseInt(card.dataset.index)];
+                    card.textContent = emoji;
+                    card.style.backgroundColor = 'rgba(255, 215, 0, 0.3)';
+                }
+            });
+
+            setTimeout(() => {
+                cards.forEach(card => {
+                    if (card.classList.contains('peek')) {
+                        card.classList.remove('peek');
+                        card.textContent = '❓';
+                        card.style.backgroundColor = '';
+                    }
+                });
+            }, 3000);
+
+            showMessage('👁️ تم إظهار جميع البطاقات لـ 3 ثوان!', 'info');
+        }
+
+        function useHint() {
+            // إظهار موقع زوج مطابق
+            const unflippedCards = [];
+            const cards = document.querySelectorAll('.memory-card');
+
+            cards.forEach((card, index) => {
+                if (!card.classList.contains('flipped') && !card.classList.contains('matched')) {
+                    unflippedCards.push({
+                        element: card,
+                        index: parseInt(card.dataset.index),
+                        emoji: gameState.cards[parseInt(card.dataset.index)]
+                    });
+                }
+            });
+
+            // البحث عن زوج مطابق
+            for (let i = 0; i < unflippedCards.length; i++) {
+                for (let j = i + 1; j < unflippedCards.length; j++) {
+                    if (unflippedCards[i].emoji === unflippedCards[j].emoji) {
+                        // إظهار الزوج المطابق
+                        unflippedCards[i].element.classList.add('hint');
+                        unflippedCards[j].element.classList.add('hint');
+                        unflippedCards[i].element.style.border = '3px solid #ffd700';
+                        unflippedCards[j].element.style.border = '3px solid #ffd700';
+                        unflippedCards[i].element.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.8)';
+                        unflippedCards[j].element.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.8)';
+
+                        setTimeout(() => {
+                            unflippedCards[i].element.classList.remove('hint');
+                            unflippedCards[j].element.classList.remove('hint');
+                            unflippedCards[i].element.style.border = '';
+                            unflippedCards[j].element.style.border = '';
+                            unflippedCards[i].element.style.boxShadow = '';
+                            unflippedCards[j].element.style.boxShadow = '';
+                        }, 4000);
+
+                        showMessage('💡 تم إظهار زوج مطابق لـ 4 ثوان!', 'info');
+                        return;
+                    }
+                }
+            }
+
+            showMessage('💡 لا توجد أزواج مطابقة متاحة!', 'error');
+        }
+
+        function useShuffle() {
+            // خلط البطاقات غير المكشوفة
+            const unflippedIndices = [];
+            const cards = document.querySelectorAll('.memory-card');
+
+            cards.forEach((card) => {
+                const index = parseInt(card.dataset.index);
+                if (!card.classList.contains('flipped') && !card.classList.contains('matched')) {
+                    unflippedIndices.push(index);
+                }
+            });
+
+            if (unflippedIndices.length < 2) {
+                showMessage('🔄 لا توجد بطاقات كافية للخلط!', 'error');
+                return;
+            }
+
+            // خلط القيم
+            const unflippedValues = unflippedIndices.map(index => gameState.cards[index]);
+            for (let i = unflippedValues.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [unflippedValues[i], unflippedValues[j]] = [unflippedValues[j], unflippedValues[i]];
+            }
+
+            // تطبيق القيم الجديدة
+            unflippedIndices.forEach((index, i) => {
+                gameState.cards[index] = unflippedValues[i];
+            });
+
+            // تأثير بصري للخلط
+            cards.forEach(card => {
+                if (!card.classList.contains('flipped') && !card.classList.contains('matched')) {
+                    card.style.transform = 'rotateY(180deg)';
+                    setTimeout(() => {
+                        card.style.transform = '';
+                    }, 500);
+                }
+            });
+
+            showMessage('🔄 تم خلط البطاقات غير المكشوفة!', 'info');
+        }
+
+        function useExtraTime() {
+            if (!gameState.isPlaying) {
+                showMessage('⏰ يجب أن تكون اللعبة قيد التشغيل لاستخدام الوقت الإضافي!', 'error');
+                return;
+            }
+
+            // إضافة 30 ثانية للوقت
+            gameState.time = Math.max(0, gameState.time - 30);
+            updateDisplay();
+
+            showMessage('⏰ تم إضافة 30 ثانية إضافية!', 'info');
+        }
+
+        // دالة عرض الرسائل
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 10px 15px;
+                border-radius: 8px;
+                color: white;
+                font-weight: bold;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            `;
+
+            switch(type) {
+                case 'success':
+                    messageDiv.style.backgroundColor = '#10b981';
+                    break;
+                case 'error':
+                    messageDiv.style.backgroundColor = '#ef4444';
+                    break;
+                case 'info':
+                default:
+                    messageDiv.style.backgroundColor = '#3b82f6';
+                    break;
+            }
+
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        const emojis = ['🎯', '🎮', '🎲', '🎪', '🎨', '🎭', '🎵', '🎸'];
+        const cardPairs = [...emojis, ...emojis];
+
+        function goBack() {
+            window.close();
+            window.history.back();
+        }
+
+        function goToMainPage() {
+            window.location.href = '/';
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createBoard() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            
+            const shuffledCards = shuffle([...cardPairs]);
+            gameState.cards = shuffledCards;
+            
+            shuffledCards.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'memory-card hidden';
+                card.dataset.index = index;
+                card.dataset.emoji = emoji;
+                card.textContent = '❓'; // النص الافتراضي
+                card.addEventListener('click', () => flipCard(index));
+                board.appendChild(card);
+            });
+        }
+
+        async function flipCard(index) {
+            if (!gameState.isPlaying) return;
+            if (gameState.flippedCards.length >= 2) return;
+
+            const card = document.querySelector(`[data-index="${index}"]`);
+            if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            // تحديث الرصيد قبل التحقق
+            await updatePlayerBalance();
+
+            // التحقق من إمكانية كشف البطاقة
+            if (!canAffordReveal()) {
+                showMessage(`💰 ليس لديك عملات كافية لكشف البطاقة! تحتاج ${gameState.cardRevealCost} عملة`, 'error');
+                console.log(`❌ رصيد غير كافي: ${gameState.coins} < ${gameState.cardRevealCost}`);
+                return;
+            }
+
+            // خصم تكلفة الكشف
+            if (!revealCard(card, index)) {
+                return;
+            }
+
+            card.classList.remove('hidden');
+            card.classList.add('flipped');
+            card.textContent = card.dataset.emoji;
+            gameState.flippedCards.push(index);
+            gameState.revealedCards.add(index);
+
+            playSound('flip');
+
+            if (gameState.flippedCards.length === 2) {
+                gameState.moves++;
+                updateDisplay();
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [first, second] = gameState.flippedCards;
+            const firstCard = document.querySelector(`[data-index="${first}"]`);
+            const secondCard = document.querySelector(`[data-index="${second}"]`);
+            
+            setTimeout(() => {
+                if (gameState.cards[first] === gameState.cards[second]) {
+                    // مطابقة!
+                    firstCard.classList.add('matched');
+                    secondCard.classList.add('matched');
+                    gameState.matches++;
+                    gameState.matchedPairs++;
+                    gameState.score += 100;
+
+                    // مكافأة المطابقة
+                    rewardMatch();
+                    showMessage(`✅ مطابقة! +${gameState.matchReward} عملة`, 'success');
+
+                    if (gameState.matchedPairs === emojis.length) {
+                        // مكافأة اللعبة المثالية
+                        if (gameState.moves <= emojis.length + 2) {
+                            gameState.coins += gameState.perfectGameBonus;
+                            updateCoinsDisplay();
+                            showMessage(`🏆 لعبة مثالية! +${gameState.perfectGameBonus} عملة إضافية!`, 'success');
+                        }
+                        endGame();
+                    }
+                } else {
+                    // لا توجد مطابقة
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    firstCard.classList.add('hidden');
+                    secondCard.classList.add('hidden');
+                    firstCard.textContent = '❓';
+                    secondCard.textContent = '❓';
+                    playSound('mismatch');
+                }
+
+                gameState.flippedCards = [];
+                updateDisplay();
+            }, 1000);
+        }
+
+        async function startGame() {
+            try {
+                console.log('🎮 بدء لعبة الذاكرة...');
+
+                // تحديث العملات من النظام الاقتصادي أو الهيدر
+                await updatePlayerBalance();
+
+                // التحقق من النظام الاقتصادي
+                let economyAvailable = false;
+                try {
+                    if (window.gameEconomy && typeof window.gameEconomy.canPlay === 'function') {
+                        const canPlayCheck = window.gameEconomy.canPlay(gameState.betAmount);
+                        if (!canPlayCheck.canPlay) {
+                            showMessage(canPlayCheck.reason || 'لا يمكن بدء اللعبة', 'error');
+                            return;
+                        }
+                        economyAvailable = true;
+                    } else {
+                        console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                        economyAvailable = false;
+                    }
+                } catch (error) {
+                    console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                    economyAvailable = false;
+                }
+
+                // بدء جلسة اقتصادية جديدة
+                if (economyAvailable) {
+                    try {
+                        gameState.economySession = await window.gameEconomy.startGameSession('memory-match', gameState.betAmount);
+                        console.log('✅ تم بدء جلسة اقتصادية جديدة');
+                    } catch (error) {
+                        console.log('⚠️ خطأ في بدء الجلسة الاقتصادية:', error);
+                    }
+                }
+
+                // إعادة تعيين حالة اللعبة
+                gameState.score = 0;
+                gameState.moves = 0;
+                gameState.matches = 0;
+                gameState.time = 0;
+                gameState.isPlaying = true;
+                gameState.timer = null;
+                gameState.flippedCards = [];
+                gameState.matchedPairs = 0;
+                gameState.revealedCards = new Set();
+
+                // إنشاء لوحة جديدة
+                createBoard();
+
+                // بدء العداد
+                startTimer();
+
+                // تحديث العرض
+                updateDisplay();
+
+                // رسالة نجاح
+                showMessage('🎮 بدأت اللعبة! ابحث عن الأزواج المتطابقة', 'success');
+                console.log('✅ تم بدء اللعبة بنجاح');
+
+            } catch (error) {
+                console.error('❌ خطأ في بدء اللعبة:', error);
+                showMessage('❌ حدث خطأ في بدء اللعبة', 'error');
+            }
+        }
+
+        // دالة بدء العداد
+        function startTimer() {
+            if (gameState.timer) {
+                clearInterval(gameState.timer);
+            }
+
+            gameState.timer = setInterval(() => {
+                if (gameState.isPlaying) {
+                    gameState.time++;
+                    updateDisplay();
+                }
+            }, 1000);
+
+            console.log('⏰ تم بدء العداد');
+        }
+
+        // دالة إيقاف العداد
+        function stopTimer() {
+            if (gameState.timer) {
+                clearInterval(gameState.timer);
+                gameState.timer = null;
+                console.log('⏰ تم إيقاف العداد');
+            }
+        }
+
+        // دالة تحديث رصيد اللاعب
+        async function updatePlayerBalance() {
+            try {
+                console.log('🔄 تحديث رصيد اللاعب...');
+
+                // محاولة الحصول على الرصيد من الهيدر
+                if (window.playerHeader) {
+                    // التحقق من وجود دالة getBalance
+                    if (typeof window.playerHeader.getBalance === 'function') {
+                        const currentBalance = window.playerHeader.getBalance();
+                        if (currentBalance && typeof currentBalance.gold === 'number') {
+                            gameState.coins = currentBalance.gold;
+                            updateCoinsDisplay();
+                            console.log('💰 تم تحديث العملات من الهيدر:', currentBalance.gold);
+                            return;
+                        }
+                    }
+
+                    // محاولة الحصول على الرصيد من خصائص الهيدر مباشرة
+                    if (typeof window.playerHeader.balance === 'number' && window.playerHeader.balance > 0) {
+                        gameState.coins = window.playerHeader.balance;
+                        updateCoinsDisplay();
+                        console.log('💰 تم تحديث العملات من خصائص الهيدر:', window.playerHeader.balance);
+                        return;
+                    }
+                }
+
+                // محاولة الحصول على الرصيد من النظام الاقتصادي
+                if (window.gameEconomy && typeof window.gameEconomy.getPlayerBalance === 'function') {
+                    const balance = await window.gameEconomy.getPlayerBalance();
+                    if (balance && typeof balance.gold === 'number') {
+                        gameState.coins = balance.gold;
+                        updateCoinsDisplay();
+                        console.log('💰 تم تحديث العملات من النظام الاقتصادي:', balance.gold);
+                        return;
+                    }
+                }
+
+                // محاولة الحصول على الرصيد من localStorage
+                const userData = localStorage.getItem('userData');
+                if (userData) {
+                    try {
+                        const user = JSON.parse(userData);
+                        if (user.balance || user.coins) {
+                            gameState.coins = user.balance || user.coins;
+                            updateCoinsDisplay();
+                            console.log('💰 تم تحديث العملات من localStorage:', gameState.coins);
+                            return;
+                        }
+                    } catch (parseError) {
+                        console.log('⚠️ خطأ في تحليل بيانات localStorage');
+                    }
+                }
+
+                console.log('⚠️ لم يتم العثور على رصيد صحيح، استخدام الرصيد الافتراضي:', gameState.coins);
+                updateCoinsDisplay();
+
+            } catch (error) {
+                console.error('❌ خطأ في تحديث رصيد اللاعب:', error);
+                console.log('💰 استخدام الرصيد الافتراضي:', gameState.coins);
+                updateCoinsDisplay();
+            }
+
+            // التحقق من النظام الاقتصادي بصمت
+            let economyAvailable = false;
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.canPlay === 'function') {
+                    const canPlayCheck = window.gameEconomy.canPlay(gameState.betAmount);
+                    if (!canPlayCheck.canPlay) {
+                        showMessage(canPlayCheck.reason, 'error');
+                        return;
+                    }
+                    economyAvailable = true;
+                } else {
+                    // تشغيل اللعبة في وضع التدريب
+                    console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                    economyAvailable = false;
+                }
+            } catch (error) {
+                // في حالة الخطأ، تشغيل اللعبة بدون نظام اقتصادي
+                console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                economyAvailable = false;
+            }
+
+            gameState = {
+                score: 0,
+                moves: 0,
+                matches: 0,
+                time: 0,
+                isPlaying: true,
+                timer: null,
+                flippedCards: [],
+                matchedPairs: 0,
+                cards: [],
+                economySession: gameState.economySession,
+                betAmount: gameState.betAmount
+            };
+            
+            createBoard();
+            updateDisplay();
+            
+            // بدء المؤقت
+            gameState.timer = setInterval(() => {
+                gameState.time++;
+                updateDisplay();
+            }, 1000);
+            
+            document.getElementById('gameComplete').style.display = 'none';
+        }
+
+        function resetGame() {
+            console.log('🔄 إعادة تعيين اللعبة...');
+
+            // إيقاف العداد
+            stopTimer();
+            gameState.isPlaying = false;
+
+            // مسح اللوحة
+            document.getElementById('gameBoard').innerHTML = '';
+            document.getElementById('gameComplete').style.display = 'none';
+
+            // إعادة تعيين الإحصائيات فقط (الحفاظ على العملات والإعدادات)
+            gameState.score = 0;
+            gameState.moves = 0;
+            gameState.matches = 0;
+            gameState.time = 0;
+            gameState.isPlaying = false;
+            gameState.timer = null;
+            gameState.flippedCards = [];
+            gameState.matchedPairs = 0;
+            gameState.cards = [];
+            gameState.revealedCards = new Set();
+
+            // تحديث العرض
+            updateDisplay();
+
+            showMessage('🔄 تم إعادة تعيين اللعبة', 'info');
+            console.log('✅ تم إعادة تعيين اللعبة بنجاح');
+        }
+
+        function showCards() {
+            if (!gameState.isPlaying) return;
+            
+            const cards = document.querySelectorAll('.memory-card');
+            cards.forEach(card => {
+                if (!card.classList.contains('matched')) {
+                    card.classList.remove('hidden');
+                    card.textContent = card.dataset.emoji;
+                }
+            });
+            
+            setTimeout(() => {
+                cards.forEach(card => {
+                    if (!card.classList.contains('matched') && !card.classList.contains('flipped')) {
+                        card.classList.add('hidden');
+                        card.textContent = '';
+                    }
+                });
+            }, 2000);
+        }
+
+        async function endGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timer);
+
+            // حساب النقاط الإضافية بناءً على السرعة والدقة
+            const timeBonus = Math.max(0, 300 - gameState.time) * 2;
+            const moveBonus = Math.max(0, 50 - gameState.moves) * 5;
+            gameState.score += timeBonus + moveBonus;
+
+            // حساب النتائج باستخدام النظام الاقتصادي
+            try {
+                const economicResult = window.gameEconomy.calculateGameResult(
+                    gameState.score,
+                    'memory-match',
+                    gameState.betAmount
+                );
+
+                const gameResult = {
+                    isWin: economicResult.isWin,
+                    winAmount: economicResult.winAmount,
+                    lossAmount: gameState.betAmount,
+                    playerScore: gameState.score,
+                    skillFactor: economicResult.skillFactor,
+                    economicFactor: economicResult.economicFactor,
+                    probability: economicResult.probability
+                };
+
+                const balanceUpdate = await window.gameEconomy.updatePlayerBalance(gameResult);
+                if (balanceUpdate.success) {
+                    console.log(`💰 تم تحديث الرصيد: ${balanceUpdate.newBalance} (تغيير: ${balanceUpdate.change})`);
+                    // تحديث عرض الرصيد في الهيدر
+                    if (window.playerHeader) {
+                        window.playerHeader.updateBalance(balanceUpdate.newBalance);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ خطأ في تحديث الرصيد:', error);
+            }
+
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalMoves').textContent = gameState.moves;
+            document.getElementById('finalTime').textContent = gameState.time;
+            document.getElementById('gameComplete').style.display = 'block';
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('moves').textContent = gameState.moves;
+            document.getElementById('matches').textContent = gameState.matches;
+
+            // تنسيق الوقت
+            const minutes = Math.floor(gameState.time / 60);
+            const seconds = gameState.time % 60;
+            document.getElementById('time').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // تحديث العملات
+            updateCoinsDisplay();
+        }
+
+        // تهيئة النظام الاقتصادي
+        async function initializeEconomy() {
+            try {
+                if (window.gameEconomy) {
+                    gameState.economySession = await window.gameEconomy.initializeGameSession('memory-match', gameState.betAmount);
+                    console.log('✅ تم تهيئة النظام الاقتصادي للعبة الذاكرة');
+                }
+            } catch (error) {
+                console.error('❌ خطأ في تهيئة النظام الاقتصادي:', error);
+            }
+        }
+
+        // تطبيق الترجمات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', async function() {
+            // تهيئة هيدر اللاعب
+            await window.playerHeader.init();
+            const headerContainer = document.getElementById('player-header-container');
+            if (headerContainer) {
+                window.playerHeader.insertHeader(headerContainer);
+            }
+
+            if (window.languageManager) {
+                window.languageManager.translatePage();
+            }
+            await initializeEconomy();
+            await updatePlayerBalance(); // تحديث الرصيد عند التحميل
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الغابة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* ------------------------------------- */
+        /* هنا يبدأ كود CSS المدمج */
+        /* ------------------------------------- */
+
+        :root {
+            --box-size-large: 120px;
+            --box-size-medium: 100px;
+            --box-size-small: 80px;
+            --box-size-xsmall: 60px;
+        }
+
+        body {
+            background-color: #0d1b2a;
+            background: linear-gradient(to bottom right, #0d1b2a, #2b3e50);
+            /* تأكد من وجود صورة الخلفية هذه في نفس المجلد أو غيّر المسار */
+            background-image: url('beautiful_background.jpg'); 
+            background-size: cover;
+            background-position: center center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            font-family: 'Noto Naskh Arabic', sans-serif;
+            color: #E0E0E0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        }
+
+        /* تأثير الزجاج - Glassmorphism */
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 12px;
+            text-align: center;
+        }
+
+        /* الشريط العلوي الذي سيحتوي على كل شيء */
+        .top-bar {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 5px;
+            box-sizing: border-box;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .game-title {
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            
+            padding: 10px 25px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-grow: 1;
+            min-width: 250px;
+            text-align: right;
+            gap: 15px;
+        }
+
+        h1 {
+            font-family: 'Amiri', serif;
+            color: #ffd700;
+            font-size: 2.8em;
+            margin: 0;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+            white-space: nowrap;
+            flex-grow: 1;
+            text-align: right;
+        }
+        
+        /* تنسيق الرسالة الآن داخل المنطقة المركزية */
+        .center-content .message {
+            font-size: 1.1em;
+            color: #00bcd4;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(0, 188, 212, 0.6);
+            text-align: center;
+            margin: 10px 0 5px 0;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            flex-grow: 1;
+            justify-content: center;
+        }
+
+        .player-info {
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+            width: 150px;
+            padding: 10px;
+            box-sizing: border-box;
+            
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .player-info p {
+            font-size: 1.1em;
+            margin: 3px 0;
+            white-space: nowrap;
+        }
+
+        /* لتحديد لون خاص للمحاولات */
+        #playerAttempts {
+            color: #FF5722;
+            font-weight: bold;
+        }
+
+        /* ------------------------------------- */
+        /* تنسيق مربع اللعبة الجديد والمحسّن (الصناديق ثلاثية الأبعاد) */
+        .square-game-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 25px; /* زيادة المسافة بين الصناديق */
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 35px; /* زيادة البادينغ */
+            max-width: 1100px; /* زيادة أقصى عرض للحاوية لتستوعب الصناديق الأكبر */
+            width: 95%;
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.8);
+            position: relative;
+            justify-content: center;
+            align-content: center;
+        }
+
+        /* تحديد موضع كل صندوق يدويًا ليتوافق مع الترتيب الدائري */
+        .box-item[data-index="0"] { grid-row: 1; grid-column: 6; } 
+        .box-item[data-index="1"] { grid-row: 1; grid-column: 5; }
+        .box-item[data-index="2"] { grid-row: 1; grid-column: 4; }
+        .box-item[data-index="3"] { grid-row: 1; grid-column: 3; }
+        .box-item[data-index="4"] { grid-row: 1; grid-column: 2; }
+        .box-item[data-index="5"] { grid-row: 1; grid-column: 1; } 
+
+        .box-item[data-index="6"] { grid-row: 2; grid-column: 1; }
+        .box-item[data-index="7"] { grid-row: 3; grid-column: 1; }
+        .box-item[data-index="8"] { grid-row: 4; grid-column: 1; }
+        .box-item[data-index="9"] { grid-row: 5; grid-column: 1; }
+
+        .box-item[data-index="10"] { grid-row: 6; grid-column: 1; }
+        .box-item[data-index="11"] { grid-row: 6; grid-column: 2; }
+        .box-item[data-index="12"] { grid-row: 6; grid-column: 3; }
+        .box-item[data-index="13"] { grid-row: 6; grid-column: 4; }
+        .box-item[data-index="14"] { grid-row: 6; grid-column: 5; }
+        .box-item[data-index="15"] { grid-row: 6; grid-column: 6; }
+
+        .box-item[data-index="16"] { grid-row: 5; grid-column: 6; }
+        .box-item[data-index="17"] { grid-row: 4; grid-column: 6; }
+        .box-item[data-index="18"] { grid-row: 3; grid-column: 6; }
+        .box-item[data-index="19"] { grid-row: 2; grid-column: 6; }
+
+        .box-item {
+            width: var(--box-size-large);
+            height: var(--box-size-large);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(0, 0, 0, 0.25) 100%);
+            border: 3px solid #ffd700; /* حدود أسمك */
+            border-radius: 15px; /* زوايا أكثر استدارة */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #E0E0E0;
+            cursor: pointer;
+            transition: all 0.4s ease-out;
+            
+            transform-style: preserve-3d;
+            transform: rotateX(10deg) rotateY(-10deg) scale(1);
+            perspective: 1000px;
+
+            box-shadow: 
+                -8px 8px 20px rgba(0, 0, 0, 0.6), /* ظلال أكبر */
+                inset 0 0 15px rgba(255, 215, 0, 0.4), /* توهج داخلي أكبر */
+                0 0 20px rgba(255, 215, 0, 0.8); /* توهج خارجي أكبر */
+
+            /* الصورة الأولية للصندوق المغلق */
+            background-image: url('box_closed.png');
+            background-size: 85%; /* تعديل حجم الصورة لتناسب الصندوق الأضخم */
+            background-repeat: no-repeat;
+            background-position: center;
+            position: relative;
+            text-align: center;
+            z-index: 1;
+            overflow: hidden;
+            /* تعريف متغير CSS مخصص لصورة المحتوى */
+            --content-image: none; 
+        }
+
+        .box-item span {
+            display: none;
+        }
+
+        /* تأثير التوهج للعبة السريعة */
+        @keyframes quick-glowing {
+            0% { 
+                box-shadow: 
+                    -8px 8px 20px rgba(0, 0, 0, 0.6), 
+                    inset 0 0 15px rgba(255, 215, 0, 0.4), 
+                    0 0 20px rgba(255, 215, 0, 0.8); 
+                border-color: #ffd700; 
+                transform: rotateX(10deg) rotateY(-10deg) scale(1);
+            }
+            50% { 
+                box-shadow: 
+                    -12px 12px 30px rgba(0, 0, 0, 0.8), 
+                    inset 0 0 20px #00bcd4, /* توهج داخلي أزرق أقوى */
+                    0 0 40px #00bcd4; /* توهج خارجي أزرق أقوى */
+                border-color: #00bcd4; 
+                transform: rotateX(10deg) rotateY(-10deg) scale(1.06); /* تكبير أكبر قليلاً */
+            }
+            100% { 
+                box-shadow: 
+                    -8px 8px 20px rgba(0, 0, 0, 0.6), 
+                    inset 0 0 15px rgba(255, 215, 0, 0.4), 
+                    0 0 20px rgba(255, 215, 0, 0.8); 
+                border-color: #ffd700; 
+                transform: rotateX(10deg) rotateY(-10deg) scale(1);
+            }
+        }
+
+        .box-item.active-glowing {
+            animation: quick-glowing 0.7s infinite alternate; /* تسريع الحركة */
+        }
+
+        /* هذا النمط الجديد هو المفتاح لعرض المحتوى الفعلي */
+        .box-item.revealed {
+            background-image: var(--content-image); /* استخدم المتغير هنا لعرض الصورة الصحيحة */
+            background-size: 85%; /* حافظ على نفس الحجم بعد الكشف */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: rgba(0,0,0,0.6);
+            border-color: #607d8b;
+            box-shadow: 
+                -5px 5px 15px rgba(0, 0, 0, 0.4), /* ظل خفيف بعد الكشف */
+                0 0 8px rgba(96, 125, 139, 0.8); /* توهج خفيف بعد الكشف */
+            cursor: default;
+            transform: rotateX(10deg) rotateY(-10deg) scale(1.03); /* تكبير خفيف للتأكيد */
+        }
+
+        /* الأنماط عند الكشف عن الصندوق - يجب أن تحافظ على المظهر ثلاثي الأبعاد */
+        .box-item.correct {
+            border-color: #4CAF50;
+            box-shadow: 
+                -8px 8px 20px rgba(0, 0, 0, 0.6), 
+                inset 0 0 15px rgba(76, 175, 80, 0.6), 
+                0 0 30px rgba(76, 175, 80, 1.2); /* توهج أخضر أقوى */
+            transform: rotateX(10deg) rotateY(-10deg) scale(1.1); /* تكبير أكبر */
+            cursor: default;
+        }
+
+        .box-item.incorrect {
+            border-color: #f44336;
+            box-shadow: 
+                -8px 8px 20px rgba(0, 0, 0, 0.6), 
+                inset 0 0 15px rgba(244, 67, 54, 0.6), 
+                0 0 30px rgba(244, 67, 54, 1.2); /* توهج أحمر أقوى */
+            transform: rotateX(10deg) rotateY(-10deg) scale(1.1);
+            cursor: default;
+        }
+        
+        .box-item.extra-chance {
+            border-color: #9c27b0;
+            box-shadow: 
+                -8px 8px 20px rgba(0, 0, 0, 0.6), 
+                inset 0 0 15px rgba(156, 39, 176, 0.6), 
+                0 0 30px rgba(156, 39, 176, 1.2); /* توهج بنفسجي أقوى */
+            transform: rotateX(10deg) rotateY(-10deg) scale(1.1);
+            cursor: default;
+        }
+
+        .box-item.monster {
+            border-color: #a0100d;
+            box-shadow: 
+                -8px 8px 20px rgba(0, 0, 0, 0.6), 
+                inset 0 0 15px rgba(160, 16, 13, 0.6), 
+                0 0 30px rgba(160, 16, 13, 1.2); /* توهج أحمر قاتم أقوى */
+            transform: rotateX(10deg) rotateY(-10deg) scale(1.1);
+            cursor: default;
+        }
+
+        @keyframes glowing {
+            0% { box-shadow: 0 0 4px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 215, 0, 1); }
+            100% { box-shadow: 0 0 4px rgba(255, 215, 0, 0.5); }
+        }
+
+        .box-item.glowing {
+            animation: glowing 1.5s infinite alternate;
+        }
+
+        /* المنطقة المركزية */
+        .center-content {
+            grid-column: 2 / span 4;
+            grid-row: 2 / span 4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 15px; /* زيادة البادينغ */
+            text-align: center;
+            min-height: 200px; /* زيادة الحد الأدنى للارتفاع */
+            z-index: 2;
+            gap: 10px; /* زيادة المسافة بين العناصر الداخلية */
+        }
+
+        .action-button {
+            background: linear-gradient(145deg, #4CAF50, #2E7D32);
+            border: none;
+            color: white;
+            padding: 12px 25px; /* زيادة حجم الزر */
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1.1em; /* زيادة حجم الخط */
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .action-button:hover {
+            background: linear-gradient(145deg, #388E3C, #1B5E20);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .action-button:disabled {
+            background: #607d8b;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* التحكم في الصوت (الآن داخل game-title) */
+        .audio-control {
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 10px;
+            width: 120px;
+            height: auto;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .audio-control label {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #E0E0E0;
+            margin-bottom: 5px;
+        }
+
+        .audio-control input[type="range"] {
+            width: 80px;
+            height: 6px;
+            border-radius: 3px;
+            background: #00bcd4;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        .audio-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffd700;
+            cursor: pointer;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            transition: background 0.3s ease;
+        }
+
+        .audio-control input[type="range"]::-webkit-slider-thumb:hover {
+            background: #ffec8b;
+        }
+
+        .audio-control input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffd700;
+            cursor: pointer;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            transition: background 0.3s ease;
+        }
+
+        .audio-control input[type="range"]::-moz-range:hover {
+            background: #ffec8b;
+        }
+
+        .audio-control button {
+            background: none;
+            border: none;
+            color: #ffd700;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            margin-top: 5px;
+        }
+
+        .audio-control button:hover {
+            color: #00bcd4;
+        }
+
+        /* استجابة التصميم (Media Queries) */
+        @media (max-width: 1200px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                margin-bottom: 15px;
+            }
+            .game-title {
+                width: 95%;
+                max-width: 700px;
+                flex-grow: 0;
+                margin: 0;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+            h1 {
+                text-align: right;
+            }
+            .audio-control {
+                margin-right: 0;
+            }
+            .center-content .message {
+                font-size: 1em;
+            }
+            .player-info {
+                width: auto;
+                margin-bottom: 10px;
+            }
+            .square-game-container {
+                padding: 25px; /* تقليل البادينغ قليلاً */
+                gap: 20px; /* تقليل الـ gap قليلاً */
+                max-width: 900px; /* تقليل أقصى عرض */
+            }
+            .box-item {
+                width: var(--box-size-medium);
+                height: var(--box-size-medium);
+                border-width: 2px;
+                border-radius: 12px;
+                transform: rotateX(10deg) rotateY(-10deg) scale(1);
+                box-shadow: 
+                    -6px 6px 18px rgba(0, 0, 0, 0.5), 
+                    inset 0 0 12px rgba(255, 215, 0, 0.3), 
+                    0 0 18px rgba(255, 215, 0, 0.7);
+                background-size: 80%;
+            }
+            .center-content {
+                min-height: 180px;
+                padding: 12px;
+                gap: 8px;
+            }
+            .action-button {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+            .target-animal-display-image {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .top-bar {
+                margin-bottom: 12px;
+                gap: 10px;
+            }
+            .game-title {
+                padding: 6px 12px;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+                gap: 8px;
+            }
+            h1 {
+                font-size: 2em;
+                text-align: center;
+            }
+            .audio-control {
+                width: 100px;
+                padding: 6px 8px;
+            }
+            .audio-control label {
+                font-size: 0.8em;
+            }
+            .audio-control input[type="range"] {
+                width: 70px;
+            }
+            .audio-control button {
+                font-size: 1.1em;
+            }
+
+            .player-info {
+                width: auto;
+                padding: 8px;
+                gap: 4px;
+                margin-bottom: 8px;
+            }
+            .player-info p {
+                font-size: 0.9em;
+            }
+            .square-game-container {
+                padding: 18px; /* تقليل البادينغ */
+                gap: 15px; /* تقليل الـ gap */
+                max-width: 600px; /* تقليل أقصى عرض */
+            }
+            .box-item {
+                width: var(--box-size-small);
+                height: var(--box-size-small);
+                border-width: 2px;
+                border-radius: 10px;
+                transform: rotateX(8deg) rotateY(-8deg) scale(1);
+                box-shadow: 
+                    -4px 4px 12px rgba(0, 0, 0, 0.4), 
+                    inset 0 0 8px rgba(255, 215, 0, 0.3), 
+                    0 0 15px rgba(255, 215, 0, 0.7);
+                background-size: 75%;
+            }
+            .center-content {
+                min-height: 150px;
+                padding: 10px;
+                gap: 6px;
+            }
+            .action-button {
+                padding: 8px 16px;
+                font-size: 0.9em;
+            }
+            .target-animal-display-image {
+                width: 80px;
+                height: 80px;
+                margin-top: 6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            .game-title {
+                padding: 4px 8px;
+                gap: 5px;
+            }
+            .audio-control {
+                width: 90px;
+                padding: 5px 7px;
+            }
+            .audio-control label {
+                font-size: 0.75em;
+            }
+            .audio-control input[type="range"] {
+                width: 60px;
+            }
+            .audio-control button {
+                font-size: 1em;
+            }
+            .player-info {
+                padding: 6px;
+                gap: 3px;
+                margin-bottom: 6px;
+            }
+            .player-info p {
+                font-size: 0.85em;
+            }
+            .square-game-container {
+                padding: 12px; /* تقليل البادينغ */
+                gap: 10px; /* تقليل الـ gap */
+                max-width: 450px; /* تقليل أقصى عرض */
+            }
+            .box-item {
+                width: var(--box-size-xsmall);
+                height: var(--box-size-xsmall);
+                border-width: 1px;
+                border-radius: 8px;
+                transform: rotateX(5deg) rotateY(-5deg) scale(1);
+                box-shadow: 
+                    -3px 3px 10px rgba(0, 0, 0, 0.3), 
+                    inset 0 0 5px rgba(255, 215, 0, 0.2), 
+                    0 0 10px rgba(255, 215, 0, 0.5);
+                background-size: 70%;
+            }
+            .center-content {
+                min-height: 120px;
+                padding: 8px;
+                gap: 4px;
+            }
+            .action-button {
+                padding: 6px 12px;
+                font-size: 0.8em;
+                margin: 4px 2px;
+            }
+            .target-animal-display-image {
+                width: 60px;
+                height: 60px;
+                margin-top: 4px;
+            }
+        }
+
+        /* تنسيق الأنماط المستهدفة في المركز (الآن لعرض صورة الحيوان المستهدف) */
+        .target-animal-display-image {
+            width: 140px; /* زيادة حجم الصورة المستهدفة */
+            height: 140px; /* زيادة حجم الصورة المستهدفة */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            margin-top: 8px;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.9);
+        }
+
+        /* ------------------------------------- */
+        /* هنا ينتهي كود CSS المدمج */
+        /* ------------------------------------- */
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="game-title glass-effect">
+            <h1>الغابة</h1>
+            <div class="audio-control glass-effect">
+                <label for="volume">الموسيقى:</label>
+                <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+                <button id="muteToggle" title="كتم/إلغاء كتم الموسيقى"><i class="fas fa-volume-up"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="square-game-container">
+            <div class="box-item" data-index="0"><span></span></div>
+            <div class="box-item" data-index="1"><span></span></div>
+            <div class="box-item" data-index="2"><span></span></div>
+            <div class="box-item" data-index="3"><span></span></div>
+            <div class="box-item" data-index="4"><span></span></div>
+            <div class="box-item" data-index="5"><span></span></div>
+            
+            <div class="box-item" data-index="6"><span></span></div>
+            <div class="box-item" data-index="7"><span></span></div>
+            <div class="box-item" data-index="8"><span></span></div>
+            <div class="box-item" data-index="9"><span></span></div>
+
+            <div class="box-item" data-index="10"><span></span></div>
+            <div class="box-item" data-index="11"><span></span></div>
+            <div class="box-item" data-index="12"><span></span></div>
+            <div class="box-item" data-index="13"><span></span></div>
+            <div class="box-item" data-index="14"><span></span></div>
+            <div class="box-item" data-index="15"><span></span></div>
+            
+            <div class="box-item" data-index="16"><span></span></div>
+            <div class="box-item" data-index="17"><span></span></div>
+            <div class="box-item" data-index="18"><span></span></div>
+            <div class="box-item" data-index="19"><span></span></div>
+
+            <div class="center-content glass-effect">
+                <div class="player-info glass-effect">
+                    <p>النقاط: <span id="playerScore">0</span></p>
+                    <p>الجولات: <span id="playerRounds">0</span></p>
+                    <p>المحاولات: <span id="playerAttempts">10</span></p>
+                </div>
+
+                <p>ابحث عن:</p>
+                <div id="targetAnimalImageDisplay" class="target-animal-display-image">
+                    </div>
+                <h3 id="targetAnimalName" style="color:#ffd700;"></h3>
+                <button id="goButton" class="action-button">انطلق GO</button>
+                <button id="restartButton" class="action-button">إعادة اللعبة</button>
+                <p id="gameMessage" class="message"></p>
+            </div>
+        </div>
+    </div>
+
+    <audio id="backgroundMusic" loop>
+        <source src="infinity.mp3" type="audio/mpeg">
+        متصفحك لا يدعم عنصر الصوت.
+    </audio>
+    <audio id="winSound" src="win.mp3" preload="auto"></audio>
+    <audio id="loseSound" src="lose.mp3" preload="auto"></audio>
+    <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
+    <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
+    <audio id="extraChanceSound" src="extra_chance_sound.mp3" preload="auto"></audio>
+    <audio id="monsterSound" src="monster_sound.mp3" preload="auto"></audio>
+    <audio id="goButtonSound" src="go_button.mp3" preload="auto"></audio>
+
+    <script>
+        /* ------------------------------------- */
+        /* هنا يبدأ كود JavaScript المدمج */
+        /* ------------------------------------- */
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // الحصول على العناصر من DOM
+            const playerScore = document.getElementById('playerScore');
+            const playerRounds = document.getElementById('playerRounds');
+            const playerAttempts = document.getElementById('playerAttempts');
+            const gameMessage = document.getElementById('gameMessage');
+            const goButton = document.getElementById('goButton');
+            const restartButton = document.getElementById('restartButton');
+            const boxItems = document.querySelectorAll('.box-item'); 
+            const backgroundMusic = document.getElementById('backgroundMusic');
+            const volumeControl = document.getElementById('volume');
+            const muteToggle = document.getElementById('muteToggle');
+            const targetAnimalImageDisplay = document.getElementById('targetAnimalImageDisplay');
+            const targetAnimalNameDisplay = document.getElementById('targetAnimalName');
+
+            // عناصر الصوت الجديدة
+            const winSound = document.getElementById('winSound');
+            const loseSound = document.getElementById('loseSound');
+            const correctSound = document.getElementById('correctSound');
+            const incorrectSound = document.getElementById('incorrectSound');
+            const extraChanceSound = document.getElementById('extraChanceSound');
+            const monsterSound = document.getElementById('monsterSound');
+            const goButtonSound = document.getElementById('goButtonSound'); 
+
+            // متغيرات حالة اللعبة
+            let currentScore = 0;
+            let currentRound = 0;
+            const maxAttempts = 10;
+            let remainingAttempts = maxAttempts;
+            let isGameRunning = false;
+            let hasInteracted = false; // لتتبع تفاعل المستخدم مع الصفحة من أجل تشغيل الصوت
+            let glowingIntervalId = null;
+            let revealedBoxesCount = 0;
+            let currentIndex = 0; // لتعقب الصندوق الحالي في دورة التوهج
+
+            let glowStepsToOpen = 0; // عدد خطوات التوهج قبل الفتح التلقائي
+            let currentGlowSteps = 0; // العدد الحالي لخطوات التوهج في الصندوق الحالي
+
+            let targetAnimal = '';
+            let targetAnimalFileName = '';
+
+            // مضاعفات النقاط
+            const TARGET_MULTIPLIER = 100;
+            const HIGH_VALUE_MULTIPLIER = 10;
+            const MEDIUM_VALUE = 3;
+            const LOW_VALUE = 2;
+            const DEFAULT_MULTIPLIER = 1;
+
+            // قائمة بأسماء الحيوانات وملفات صورها ومضاعفاتها الأساسية
+            const animalData = [
+                // 5 حيوانات بمضاعف 10
+                { name: "أسد", file: "lion.png", base_multiplier: HIGH_VALUE_MULTIPLIER },
+                { name: "فيل", file: "elephant.png", base_multiplier: HIGH_VALUE_MULTIPLIER },
+                { name: "نمر", file: "tiger.png", base_multiplier: HIGH_VALUE_MULTIPLIER },
+                { name: "زرافة", file: "giraffe.png", base_multiplier: HIGH_VALUE_MULTIPLIER },
+                { name: "حصان", file: "horse.png", base_multiplier: HIGH_VALUE_MULTIPLIER },
+
+                // 4 حيوانات بمضاعف 3
+                { name: "كلب", file: "dog.png", base_multiplier: MEDIUM_VALUE },
+                { name: "قطة", file: "cat.png", base_multiplier: MEDIUM_VALUE },
+                { name: "دب", file: "bear.png", base_multiplier: MEDIUM_VALUE },
+                { name: "أرنب", file: "rabbit.png", base_multiplier: MEDIUM_VALUE },
+
+                // 10 حيوانات بمضاعف 2
+                { name: "غزال", file: "deer.png", base_multiplier: LOW_VALUE },
+                { name: "بومة", file: "owl.png", base_multiplier: LOW_VALUE },
+                { name: "نسر", file: "eagle.png", base_multiplier: LOW_VALUE },
+                { name: "بطة", file: "duck.png", base_multiplier: LOW_VALUE },
+                { name: "سمكة", file: "fish.png", base_multiplier: LOW_VALUE },
+                { name: "قرد", file: "monkey.png", base_multiplier: LOW_VALUE },
+                { name: "ذئب", file: "wolf.png", base_multiplier: LOW_VALUE },
+                { name: "جمل", file: "camel.png", base_multiplier: LOW_VALUE },
+                { name: "ببغاء", file: "parrot.png", base_multiplier: LOW_VALUE },
+                { name: "عصفور", file: "bird.png", base_multiplier: LOW_VALUE },
+
+                // الحيوانات المتبقية بمضاعف افتراضي 1
+                { name: "ديك", file: "rooster.png", base_multiplier: DEFAULT_MULTIPLIER },
+                { name: "خروف", file: "sheep.png", base_multiplier: DEFAULT_MULTIPLIER },
+                { name: "بقرة", file: "cow.png", base_multiplier: DEFAULT_MULTIPLIER },
+                { name: "تمساح", file: "crocodile.png", base_multiplier: DEFAULT_MULTIPLIER },
+                { name: "ضفدع", file: "frog.png", base_multiplier: DEFAULT_MULTIPLIER }
+            ];
+
+            // أنواع الصناديق الخاصة الجديدة
+            const specialBoxes = [
+                { type: "extra-chance", file: "extra_chance.png" },
+                { type: "monster", file: "monster.png" }
+            ];
+
+            // --- وظائف مساعدة عامة ---
+            function showMessage(msg, type = 'info') {
+                gameMessage.textContent = msg;
+                if (type === 'success') {
+                    gameMessage.style.color = '#4CAF50';
+                } else if (type === 'error') {
+                    gameMessage.style.color = '#f44336';
+                } else {
+                    gameMessage.style.color = '#00bcd4';
+                }
+            }
+
+            function updatePlayerInfo() {
+                playerScore.textContent = currentScore;
+                playerRounds.textContent = currentRound;
+                playerAttempts.textContent = remainingAttempts;
+            }
+
+            function saveGameData() {
+                localStorage.setItem('animalHuntScore', currentScore);
+                localStorage.setItem('animalHuntRounds', currentRound);
+            }
+
+            function loadGameData() {
+                currentScore = parseInt(localStorage.getItem('animalHuntScore')) || 0;
+                currentRound = parseInt(localStorage.getItem('animalHuntRounds')) || 0;
+                remainingAttempts = maxAttempts;
+                updatePlayerInfo();
+            }
+
+            // --- وظائف التحكم في الصوت ---
+            function playSound(audioElement) {
+                if (audioElement && !backgroundMusic.muted) {
+                    audioElement.currentTime = 0; // إعادة الصوت من البداية
+                    audioElement.volume = volumeControl.value; // استخدام نفس مستوى صوت الموسيقى
+                    audioElement.play().catch(e => console.log("فشل تشغيل المؤثر الصوتي:", e));
+                }
+            }
+
+            function initializeAudio() {
+                volumeControl.value = localStorage.getItem('musicVolume') || 0.5;
+                backgroundMusic.volume = volumeControl.value;
+                const isMuted = localStorage.getItem('isMuted') === 'true';
+                if (isMuted) {
+                    backgroundMusic.muted = true;
+                    muteToggle.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                } else {
+                    backgroundMusic.muted = false;
+                    muteToggle.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+
+                // ضبط مستوى صوت المؤثرات الصوتية أيضًا
+                winSound.volume = volumeControl.value;
+                loseSound.volume = volumeControl.value;
+                correctSound.volume = volumeControl.value;
+                incorrectSound.volume = volumeControl.value;
+                extraChanceSound.volume = volumeControl.value;
+                monsterSound.volume = volumeControl.value;
+                goButtonSound.volume = volumeControl.value; 
+
+                // إضافة مستمع لحدث 'canplaythrough' لضمان تحميل الصوت قبل التشغيل التلقائي
+                // وأيضاً لضمان تفاعل المستخدم
+                backgroundMusic.addEventListener('canplaythrough', () => {
+                    // لا تشغل تلقائيا هنا، بل عند تفاعل المستخدم الأول
+                }, { once: true });
+
+                // التفاعل الأول للمستخدم لتشغيل الموسيقى
+                document.body.addEventListener('click', () => {
+                    if (!hasInteracted) {
+                        // السطر الذي تم إلغاؤه (تعليقه) أو حذفه
+                        // backgroundMusic.play().catch(e => console.log("فشل تشغيل الصوت عند التفاعل الأول:", e));
+                        hasInteracted = true;
+                    }
+                }, { once: true });
+            }
+
+            volumeControl.addEventListener('input', () => {
+                backgroundMusic.volume = volumeControl.value;
+                // تحديث مستوى صوت المؤثرات الصوتية أيضًا
+                winSound.volume = volumeControl.value;
+                loseSound.volume = volumeControl.value;
+                correctSound.volume = volumeControl.value;
+                incorrectSound.volume = volumeControl.value;
+                extraChanceSound.volume = volumeControl.value;
+                monsterSound.volume = volumeControl.value;
+                goButtonSound.volume = volumeControl.value; 
+
+                localStorage.setItem('musicVolume', volumeControl.value);
+                if (backgroundMusic.volume > 0) {
+                    backgroundMusic.muted = false;
+                    muteToggle.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    localStorage.setItem('isMuted', 'false');
+                }
+            });
+
+            muteToggle.addEventListener('click', () => {
+                backgroundMusic.muted = !backgroundMusic.muted;
+                if (backgroundMusic.muted) {
+                    muteToggle.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                    localStorage.setItem('isMuted', 'true');
+                } else {
+                    muteToggle.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    localStorage.setItem('isMuted', 'false');
+                    if (backgroundMusic.paused && hasInteracted) { 
+                        backgroundMusic.play().catch(e => console.log("فشل تشغيل الصوت بعد إلغاء الكتم:", e));
+                    }
+                }
+            });
+
+            // --- منطق اللعبة "البحث عن حيوان" ---
+
+            /**
+             * تهيئة الصناديق في بداية اللعبة أو الجولة.
+             */
+            function setupGame() {
+                boxItems.forEach(box => {
+                    box.classList.remove('glowing', 'correct', 'incorrect', 'revealed', 'extra-chance', 'monster', 'active-glowing');
+                    box.style.backgroundImage = 'url("box_closed.png")'; // إعادة صورة الصندوق المغلق
+                    box.style.backgroundSize = '85%'; 
+                    box.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    box.dataset.type = 'animal'; // إعادة تعيين البيانات
+                    box.dataset.name = '';
+                    box.dataset.file = '';
+                    box.dataset.multiplier = '';
+                    box.style.setProperty('--content-image', 'none'); // إعادة تعيين متغير CSS
+                    box.style.borderColor = '#ffd700'; 
+                    box.style.boxShadow = '-8px 8px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.8)';
+                    box.style.transform = 'rotateX(10deg) rotateY(-10deg) scale(1)';
+                    box.style.cursor = 'pointer'; 
+                });
+
+                targetAnimalImageDisplay.style.backgroundImage = 'none';
+                targetAnimalNameDisplay.textContent = '';
+                revealedBoxesCount = 0;
+
+                remainingAttempts = maxAttempts;
+                updatePlayerInfo();
+                showMessage('اضغط "انطلق GO" لبدء جولة جديدة!');
+                goButton.disabled = false;
+                restartButton.disabled = false;
+
+                if (glowingIntervalId) {
+                    clearInterval(glowingIntervalId);
+                    glowingIntervalId = null;
+                }
+                currentIndex = 0;
+                currentGlowSteps = 0;
+                glowStepsToOpen = 0;
+            }
+
+            /**
+             * بدء جولة جديدة من اللعبة.
+             * اختيار حيوان عشوائي وتوزيع صور الحيوانات على الصناديق.
+             */
+            function startGame() {
+                if (isGameRunning) return;
+                isGameRunning = true;
+                currentRound++;
+                remainingAttempts = maxAttempts;
+                updatePlayerInfo();
+                goButton.disabled = true;
+                revealedBoxesCount = 0;
+                currentIndex = 0;
+                
+                playSound(goButtonSound); // تشغيل صوت زر GO هنا
+
+                // عدد خطوات التوهج قبل فتح الصندوق تلقائيًا (بين 3 و 7)
+                glowStepsToOpen = Math.floor(Math.random() * (7 - 3 + 1)) + 3; 
+                currentGlowSteps = 0;
+
+                // 1. اختيار حيوان مستهدف عشوائي
+                const targetAnimalObj = animalData[Math.floor(Math.random() * animalData.length)];
+                targetAnimal = targetAnimalObj.name;
+                targetAnimalFileName = targetAnimalObj.file;
+
+                // 2. عرض الحيوان المستهدف في المنطقة المركزية
+                displayTargetAnimal(targetAnimal, targetAnimalFileName);
+
+                // 3. إعداد محتوى الصناديق
+                let boxesContent = [];
+                let availableAnimalsForBoxes = [...animalData];
+
+                // إضافة الصناديق الخاصة
+                const numExtraChances = 2;
+                const numMonsters = 1;
+
+                for (let i = 0; i < numExtraChances; i++) {
+                    boxesContent.push({ type: "extra-chance", name: "فرصة إضافية", file: specialBoxes[0].file, multiplier: 0 });
+                }
+                for (let i = 0; i < numMonsters; i++) {
+                    boxesContent.push({ type: "monster", name: "وحش", file: specialBoxes[1].file, multiplier: 0 });
+                }
+
+                // ملء باقي الصناديق بالحيوانات
+                const numAnimalBoxesToFill = boxItems.length - boxesContent.length;
+
+                for (let i = 0; i < numAnimalBoxesToFill; i++) {
+                    if (availableAnimalsForBoxes.length === 0) {
+                        // إذا نفدت الحيوانات، أعد استخدامها
+                        console.warn("نفدت الحيوانات الفريدة لملء الصناديق. إعادة استخدام الحيوانات.");
+                        availableAnimalsForBoxes = [...animalData];
+                        shuffleArray(availableAnimalsForBoxes);
+                    }
+                    const randomIndex = Math.floor(Math.random() * availableAnimalsForBoxes.length);
+                    const animal = availableAnimalsForBoxes.splice(randomIndex, 1)[0];
+
+                    let currentMultiplier = animal.base_multiplier;
+                    if (animal.name === targetAnimal) {
+                        currentMultiplier = TARGET_MULTIPLIER;
+                    }
+                    boxesContent.push({ type: "animal", name: animal.name, file: animal.file, multiplier: currentMultiplier });
+                }
+
+                shuffleArray(boxesContent); // خلط المحتوى ليكون عشوائيًا
+
+                // تعيين المحتوى لكل صندوق
+                // نستخدم هنا حلقة for عادية لضمان الترتيب الصحيح بناءً على data-index
+                const orderedBoxes = Array.from(boxItems).sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
+
+                for (let i = 0; i < orderedBoxes.length; i++) {
+                    const box = orderedBoxes[i];
+                    const content = boxesContent[i];
+                    
+                    box.dataset.type = content.type;
+                    box.dataset.name = content.name;
+                    box.dataset.file = content.file;
+                    box.dataset.multiplier = content.multiplier;
+                    box.style.backgroundImage = 'url("box_closed.png")'; // تأكد أنها تبدأ مغلقة
+                    box.style.backgroundSize = '85%'; 
+                    box.classList.remove('revealed', 'extra-chance', 'monster');
+                    box.style.setProperty('--content-image', 'none'); 
+                }
+
+                showMessage(`ابحث عن صورة ${targetAnimal}.`);
+                startGlowingEffect(); // بدء تأثير التوهج
+            }
+
+            /**
+             * يبدأ تأثير التوهج الدائري للصناديق غير المكشوفة.
+             */
+            function startGlowingEffect() {
+                if (glowingIntervalId) {
+                    clearInterval(glowingIntervalId);
+                    glowingIntervalId = null;
+                }
+
+                const orderedBoxes = Array.from(boxItems).sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
+
+                glowingIntervalId = setInterval(() => {
+                    // إزالة التوهج من جميع الصناديق أولاً
+                    orderedBoxes.forEach(box => box.classList.remove('active-glowing'));
+
+                    let boxToGlow = null;
+                    let iterationCount = 0;
+                    // البحث عن الصندوق التالي غير المكشوف ليبدأ التوهج به
+                    while (iterationCount < orderedBoxes.length) {
+                        const checkIndex = (currentIndex + iterationCount) % orderedBoxes.length;
+                        if (!orderedBoxes[checkIndex].classList.contains('revealed')) {
+                            boxToGlow = orderedBoxes[checkIndex];
+                            // تحديث currentIndex للصندوق التالي في الدورة، لضمان استمرارية التوهج
+                            currentIndex = (checkIndex + 1) % orderedBoxes.length; 
+                            break;
+                        }
+                        iterationCount++;
+                    }
+
+                    if (boxToGlow) {
+                        boxToGlow.classList.add('active-glowing');
+
+                        currentGlowSteps++;
+                        if (currentGlowSteps >= glowStepsToOpen) {
+                            // إضافة تأخير بسيط هنا لضمان رؤية تأثير التوهج قبل الفتح
+                            setTimeout(() => {
+                                handleBoxClick(boxToGlow); 
+                                // إعادة تعيين خطوات التوهج وعدد الخطوات الحالية للصندوق التالي
+                                glowStepsToOpen = Math.floor(Math.random() * (3 - 1 + 1)) + 1; // تسريع الفتح التلقائي (خطوة واحدة لثلاث خطوات)
+                                currentGlowSteps = 0;
+                            }, 300); // تأخير 300 مللي ثانية
+                        }
+                    } else {
+                        // إذا لم يتم العثور على أي صناديق غير مكشوفة
+                        clearInterval(glowingIntervalId);
+                        glowingIntervalId = null;
+                        if (isGameRunning) { // إذا كانت اللعبة لا تزال قيد التشغيل (ولم يتم العثور على الهدف)
+                             showMessage(`انتهت جميع الصناديق المتاحة! لم تعثر على ${targetAnimal}.`, 'error');
+                             endGame(false);
+                        }
+                    }
+                }, 400); // تسريع الفاصل الزمني للتوهج (من 800ms إلى 400ms)
+            }
+
+            /**
+             * التعامل مع النقر على الصندوق أو الفتح التلقائي.
+             */
+            function handleBoxClick(clickedBox) {
+                // منع التفاعل مع الصناديق المكشوفة بالفعل أو إذا كانت اللعبة متوقفة
+                if (clickedBox.classList.contains('revealed') || !isGameRunning) {
+                    return; 
+                }
+
+                // إزالة فئة التوهج النشط وإضافة فئة الكشف
+                clickedBox.classList.remove('active-glowing'); 
+                clickedBox.classList.add('revealed');
+
+                // جلب بيانات الصندوق
+                const boxType = clickedBox.dataset.type;
+                const boxName = clickedBox.dataset.name;
+                const boxFile = clickedBox.dataset.file;
+                const boxMultiplier = parseInt(clickedBox.dataset.multiplier);
+
+                // تطبيق صورة المحتوى باستخدام متغير CSS
+                clickedBox.style.setProperty('--content-image', `url("${boxFile}")`);
+                clickedBox.style.backgroundImage = 'var(--content-image)'; // تأكد من استخدام المتغير
+
+                clickedBox.style.cursor = 'default'; // جعل الصندوق غير قابل للنقر مرة أخرى
+                revealedBoxesCount++;
+
+                // منطق اللعبة بناءً على نوع الصندوق
+                if (boxType === "extra-chance") {
+                    remainingAttempts += 1;
+                    showMessage('حظاً سعيداً! حصلت على فرصة إضافية.', 'success');
+                    clickedBox.classList.add('extra-chance'); 
+                    playSound(extraChanceSound);
+                } else if (boxType === "monster") {
+                    // الوحش يتسبب في خسارة فورية للجولة
+                    remainingAttempts = 0; // اجعل المحاولات صفر للتأكيد
+                    showMessage('كارثة! لقد واجهت وحشاً! انتهت الجولة.', 'error');
+                    clickedBox.classList.add('monster'); 
+                    playSound(monsterSound);
+                    endGame(false); // هذا السطر الجديد هو المفتاح للخسارة الفورية
+                } else { // صندوق حيوان عادي
+                    remainingAttempts--;
+                    if (boxName === targetAnimal) {
+                        currentScore += boxMultiplier;
+                        showMessage(`لقد عثرت على ${boxName}! فزت ${boxMultiplier} نقطة.`, 'success');
+                        clickedBox.classList.add('correct'); 
+                        playSound(correctSound);
+                        endGame(true); // اللعبة تنتهي عند العثور على الحيوان المستهدف
+                    } else {
+                        currentScore += boxMultiplier;
+                        showMessage(`لقد عثرت على ${boxName}. أضفت ${boxMultiplier} نقطة.`, 'info');
+                        clickedBox.classList.add('incorrect'); 
+                        playSound(incorrectSound);
+                    }
+                }
+                
+                updatePlayerInfo(); // تحديث معلومات اللاعب
+
+                // التحقق من حالة اللعبة بعد كل كشف (إذا لم تكن قد انتهت بالفعل بسبب الوحش)
+                if (isGameRunning) { // تأكد من أن اللعبة ما زالت قيد التشغيل
+                    if (remainingAttempts <= 0) { 
+                        showMessage(`انتهت المحاولات! لم تعثر على ${targetAnimal}.`, 'error');
+                        endGame(false);
+                    } else if (revealedBoxesCount === boxItems.length) {
+                        // إذا كُشفت جميع الصناديق ولم يتم العثور على الهدف
+                        showMessage(`انتهت جميع الصناديق المتاحة! لم تعثر على ${targetAnimal}.`, 'error');
+                        endGame(false);
+                    }
+                }
+
+                saveGameData();
+            }
+
+            /**
+             * إنهاء اللعبة وعرض النتيجة.
+             */
+            function endGame(won) {
+                isGameRunning = false;
+                goButton.disabled = false;
+                restartButton.disabled = false;
+
+                if (glowingIntervalId) {
+                    clearInterval(glowingIntervalId);
+                    glowingIntervalId = null;
+                }
+                boxItems.forEach(box => {
+                    box.classList.remove('active-glowing');
+                    box.style.cursor = 'default';
+                });
+
+                if (won) {
+                    showMessage(`تهانينا! لقد عثرت على ${targetAnimal} وربحت الجولة!`, 'success');
+                    playSound(winSound);
+                } else {
+                    showMessage(`انتهت اللعبة. حاول مرة أخرى!`, 'error');
+                    playSound(loseSound);
+                }
+                
+                // كشف جميع الصناديق المتبقية في نهاية اللعبة (إذا لم يتم الفوز)
+                // هذا الجزء سيظل يعمل للكشف عن جميع الصناديق بعد نهاية الجولة
+                boxItems.forEach(box => {
+                    if (!box.classList.contains('revealed')) {
+                        box.classList.add('revealed');
+                        // يجب كشف الصورة الصحيحة حتى لو لم يفز اللاعب
+                        box.style.setProperty('--content-image', `url("${box.dataset.file}")`);
+                        box.style.backgroundImage = 'var(--content-image)'; // تأكد من استخدام المتغير
+
+                        const boxType = box.dataset.type;
+                        const boxName = box.dataset.name;
+
+                        if (boxType === "extra-chance") {
+                            box.classList.add('extra-chance'); 
+                        } else if (boxType === "monster") {
+                            box.classList.add('monster'); 
+                        } else {
+                            if (boxName === targetAnimal) {
+                                box.classList.add('correct'); 
+                            } else {
+                                box.classList.add('incorrect'); 
+                            }
+                        }
+                    }
+                });
+            }
+
+            /**
+             * عرض الحيوان المستهدف في الواجهة.
+             */
+            function displayTargetAnimal(animalName, fileName) {
+                targetAnimalNameDisplay.textContent = animalName;
+                targetAnimalImageDisplay.style.backgroundImage = `url("${fileName}")`;
+            }
+
+            // --- وظائف عامة ---
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            // --- معالجات الأحداث للأزرار ---
+            goButton.addEventListener('click', () => {
+                if (!isGameRunning) {
+                    setupGame();
+                    startGame();
+                }
+            });
+
+            restartButton.addEventListener('click', () => {
+                currentScore = 0;
+                currentRound = 0;
+                localStorage.removeItem('animalHuntScore');
+                localStorage.removeItem('animalHuntRounds');
+                isGameRunning = false;
+                setupGame();
+            });
+
+            // --- التهيئة الأولية عند تحميل الصفحة ---
+            initializeAudio();
+            loadGameData();
+            setupGame();
+        });
+        /* ------------------------------------- */
+        /* هنا ينتهي كود JavaScript المدمج */
+        /* ------------------------------------- */
+    </script>
+</body>
+</html>

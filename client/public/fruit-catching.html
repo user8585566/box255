@@ -1,0 +1,2783 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة قطف الفواكه المطورة - INFINITY BOX</title>
+    <script src="js/translations.js"></script>
+    <script src="js/game-economy.js"></script>
+    <script src="js/player-header.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+            /* منع التمرير والتكبير على الجوال */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-text-size-adjust: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #1e3c72 50%, #2a5298 75%, #1e3c72 100%);
+            animation: backgroundShift 20s ease-in-out infinite;
+            /* تحسينات الأداء */
+            will-change: background;
+            transform: translateZ(0);
+        }
+
+        /* منطقة التحكم باللمس */
+        .touch-control-area {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: linear-gradient(to top,
+                rgba(255, 255, 255, 0.05) 0%,
+                transparent 100%);
+            pointer-events: none;
+            z-index: 1;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .touch-control-area::before {
+            content: 'منطقة التحكم';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        @keyframes backgroundShift {
+            0% { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #1e3c72 50%, #2a5298 75%, #1e3c72 100%); }
+            25% { background: linear-gradient(135deg, #2a5298 0%, #1e3c72 25%, #2a5298 50%, #1e3c72 75%, #2a5298 100%); }
+            50% { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #3b82c4 50%, #2a5298 75%, #1e3c72 100%); }
+            75% { background: linear-gradient(135deg, #2a5298 0%, #3b82c4 25%, #1e3c72 50%, #2a5298 75%, #1e3c72 100%); }
+            100% { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #1e3c72 50%, #2a5298 75%, #1e3c72 100%); }
+        }
+
+        .game-header {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            font-size: 14px;
+        }
+
+        .home-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-left: 10px;
+        }
+
+        .home-btn:hover {
+            background: linear-gradient(135deg, #45a049, #4CAF50);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .home-btn:active {
+            transform: scale(0.95);
+        }
+
+        .mute-btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-left: 10px;
+        }
+
+        .mute-btn:hover {
+            background: linear-gradient(135deg, #1976D2, #2196F3);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .mute-btn:active {
+            transform: scale(0.95);
+        }
+
+        .mute-btn.muted {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+
+        /* تحسينات للجوال */
+        @media (max-width: 768px) {
+            .home-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+                margin-left: 5px;
+            }
+
+            .mute-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+                margin-left: 5px;
+            }
+
+            .game-header {
+                padding: 8px 15px;
+                gap: 15px;
+                font-size: 12px;
+            }
+
+            .touch-control-area {
+                height: 120px;
+            }
+
+            .touch-control-area::before {
+                font-size: 10px;
+                top: 5px;
+            }
+        }
+
+
+
+        .score-item {
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .score-value {
+            font-size: 18px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .basket {
+            position: absolute;
+            bottom: 30px;
+            width: 110px;
+            height: 75px;
+            background: linear-gradient(145deg, #8B4513, #D2691E, #CD853F);
+            border-radius: 20px 20px 60% 60%;
+            border: 3px solid #654321;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            cursor: pointer;
+            transition: left 0.05s ease-out;
+            box-shadow:
+                0 10px 25px rgba(0,0,0,0.7),
+                inset 0 3px 15px rgba(255,255,255,0.4),
+                0 0 40px rgba(255, 215, 0, 0.6);
+            animation: basketGlow 3s ease-in-out infinite;
+            overflow: hidden;
+            /* تحسينات اللمس */
+            touch-action: none;
+            user-select: none;
+        }
+
+        .basket::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 10px;
+            right: 10px;
+            height: 25px;
+            background: linear-gradient(145deg, #F4A460, #DEB887, #CD853F);
+            border-radius: 15px 15px 0 0;
+            border: 2px solid #8B4513;
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.4);
+        }
+
+        .basket::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 15px;
+            right: 15px;
+            height: 12px;
+            background: linear-gradient(90deg, #8B4513, #654321, #8B4513);
+            border-radius: 8px;
+            opacity: 0.8;
+        }
+
+        @keyframes basketGlow {
+            0% { box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 2px 10px rgba(255,255,255,0.3), 0 0 30px rgba(210, 180, 140, 0.4); }
+            50% { box-shadow: 0 10px 25px rgba(0,0,0,0.7), inset 0 3px 15px rgba(255,255,255,0.4), 0 0 40px rgba(255, 215, 0, 0.6); }
+            100% { box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 2px 10px rgba(255,255,255,0.3), 0 0 30px rgba(210, 180, 140, 0.4); }
+        }
+
+        .game-item {
+            position: absolute;
+            font-size: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            user-select: none;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: itemEntry 0.5s ease-out;
+            /* تحسينات الأداء للعناصر المتحركة */
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        @keyframes itemEntry {
+            0% { 
+                transform: scale(0) rotate(180deg); 
+                opacity: 0; 
+            }
+            50% { 
+                transform: scale(1.2) rotate(90deg); 
+                opacity: 0.7; 
+            }
+            100% { 
+                transform: scale(1) rotate(0deg); 
+                opacity: 1; 
+            }
+        }
+
+        .fruit {
+            width: 55px;
+            height: 55px;
+            animation: fruitFloat 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes fruitFloat {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(-10px) rotate(10deg); }
+        }
+
+        .bad-fruit {
+            width: 55px;
+            height: 55px;
+            animation: wobble 0.5s ease-in-out infinite alternate;
+        }
+
+        .bomb {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ff4757, #2f1b14);
+            border-radius: 50%;
+            border: 2px solid #333;
+            animation: bombPulse 1s ease-in-out infinite;
+        }
+
+        .combo-basket {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #ffd700, #ff8c00);
+            border-radius: 50%;
+            border: 3px solid #b8860b;
+            animation: goldSpin 2s linear infinite;
+        }
+
+        .fruit-salad {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1, #f9ca24);
+            border-radius: 50%;
+            border: 3px solid #fff;
+            animation: rainbowPulse 1.5s ease-in-out infinite;
+        }
+
+        .gift-trap {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b, #8e44ad);
+            border-radius: 15px;
+            border: 3px solid #2c3e50;
+            animation: trapPulse 2s ease-in-out infinite;
+            position: relative;
+            box-shadow:
+                0 0 20px rgba(231, 76, 60, 0.6),
+                inset 0 2px 10px rgba(255,255,255,0.2);
+        }
+
+        .gift-trap::before {
+            content: '⚠️';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 12px;
+            background: #f39c12;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: warningBlink 1s ease-in-out infinite;
+        }
+
+        @keyframes wobble {
+            0% { transform: rotate(-3deg); }
+            100% { transform: rotate(3deg); }
+        }
+
+        @keyframes bombPulse {
+            0% { transform: scale(1); box-shadow: 0 0 5px #ff4757; }
+            50% { transform: scale(1.1); box-shadow: 0 0 15px #ff4757; }
+            100% { transform: scale(1); box-shadow: 0 0 5px #ff4757; }
+        }
+
+        @keyframes goldSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes rainbowPulse {
+            0% { transform: scale(1); filter: hue-rotate(0deg); }
+            50% { transform: scale(1.1); filter: hue-rotate(180deg); }
+            100% { transform: scale(1); filter: hue-rotate(360deg); }
+        }
+
+        @keyframes trapPulse {
+            0% {
+                transform: scale(1) rotate(0deg);
+                box-shadow: 0 0 20px rgba(231, 76, 60, 0.6);
+            }
+            25% {
+                transform: scale(1.05) rotate(2deg);
+                box-shadow: 0 0 25px rgba(231, 76, 60, 0.8);
+            }
+            50% {
+                transform: scale(1.1) rotate(0deg);
+                box-shadow: 0 0 30px rgba(231, 76, 60, 1);
+            }
+            75% {
+                transform: scale(1.05) rotate(-2deg);
+                box-shadow: 0 0 25px rgba(231, 76, 60, 0.8);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                box-shadow: 0 0 20px rgba(231, 76, 60, 0.6);
+            }
+        }
+
+        @keyframes warningBlink {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .mystery-box, .mystery-gift, .mystery-mail {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #f39c12, #e67e22, #d35400);
+            border-radius: 10px;
+            border: 3px solid #8e44ad;
+            animation: mysteryFloat 3s ease-in-out infinite;
+            position: relative;
+            box-shadow:
+                0 0 15px rgba(243, 156, 18, 0.6),
+                inset 0 2px 8px rgba(255,255,255,0.3);
+        }
+
+        .mystery-box::before, .mystery-gift::before, .mystery-mail::before {
+            content: '?';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            font-weight: bold;
+            color: #8e44ad;
+            animation: questionMark 2s ease-in-out infinite;
+        }
+
+        @keyframes mysteryFloat {
+            0% {
+                transform: translateY(0px) rotate(0deg);
+                box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
+            }
+            33% {
+                transform: translateY(-8px) rotate(5deg);
+                box-shadow: 0 0 20px rgba(243, 156, 18, 0.8);
+            }
+            66% {
+                transform: translateY(-5px) rotate(-3deg);
+                box-shadow: 0 0 25px rgba(243, 156, 18, 1);
+            }
+            100% {
+                transform: translateY(0px) rotate(0deg);
+                box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
+            }
+        }
+
+        @keyframes questionMark {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* الكنوز */
+        .diamond, .crystal, .gold-bag {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            border: 2px solid #fff;
+            animation: treasureShine 2s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        }
+
+        .diamond {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb, #90caf9);
+        }
+
+        .crystal {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7, #ce93d8);
+        }
+
+        .gold-bag {
+            background: linear-gradient(135deg, #fff3e0, #ffcc02, #ff8f00);
+        }
+
+        /* العملة النادرة */
+        .rare-coin, .trophy {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            border: 3px solid #ffd700;
+            animation: rareGlow 3s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        .rare-coin {
+            background: linear-gradient(135deg, #ffd700, #ffb300, #ff8f00);
+        }
+
+        .trophy {
+            background: linear-gradient(135deg, #ffd700, #ffab00, #ff6f00);
+            border-radius: 15px;
+        }
+
+        /* النجوم */
+        .star, .super-star, .sparkle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            animation: starTwinkle 1.5s ease-in-out infinite;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+        }
+
+        .star {
+            background: linear-gradient(135deg, #ffd700, #ffeb3b);
+        }
+
+        .super-star {
+            background: linear-gradient(135deg, #ff9800, #ffc107, #ffeb3b);
+            animation: superStarPulse 2s ease-in-out infinite;
+        }
+
+        .sparkle {
+            background: linear-gradient(135deg, #e1f5fe, #b3e5fc, #81d4fa);
+        }
+
+        @keyframes treasureShine {
+            0% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.6); }
+            50% { box-shadow: 0 0 25px rgba(255, 255, 255, 1); }
+            100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.6); }
+        }
+
+        @keyframes rareGlow {
+            0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+            50% { box-shadow: 0 0 35px rgba(255, 215, 0, 1); }
+            100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+        }
+
+        @keyframes starTwinkle {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes superStarPulse {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(90deg); }
+            50% { transform: scale(1.2) rotate(180deg); }
+            75% { transform: scale(1.1) rotate(270deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+
+        /* مؤثر المطر */
+        .rain-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+
+        .rain-container.active {
+            opacity: 1;
+        }
+
+        .raindrop {
+            position: absolute;
+            background: linear-gradient(to bottom, rgba(174, 194, 224, 0.6), rgba(174, 194, 224, 0.3));
+            width: 2px;
+            border-radius: 0 0 50% 50%;
+            animation: rainFall linear infinite;
+        }
+
+        @keyframes rainFall {
+            0% {
+                transform: translateY(-100vh);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 2000;
+        }
+
+        .game-title {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .game-instructions {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            max-width: 600px;
+            padding: 0 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            touch-action: manipulation;
+            margin: 10px;
+        }
+
+        .btn:hover, .btn:active {
+            transform: scale(1.05);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 2000;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .score-popup {
+            position: absolute;
+            font-weight: bold;
+            font-size: 20px;
+            pointer-events: none;
+            z-index: 150;
+            animation: scoreFloat 1.5s ease-out forwards;
+        }
+
+        .score-popup.positive {
+            color: #4ecdc4;
+        }
+
+        .score-popup.negative {
+            color: #ff6b6b;
+        }
+
+        .score-popup.gold {
+            color: #ffd700;
+        }
+
+        .score-popup.pearl {
+            color: #e0e0e0;
+        }
+
+        @keyframes scoreFloat {
+            0% { 
+                transform: translateY(0) scale(1); 
+                opacity: 1; 
+            }
+            100% { 
+                transform: translateY(-80px) scale(1.3); 
+                opacity: 0; 
+            }
+        }
+
+        .mobile-instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 500;
+            display: none;
+        }
+
+        .mobile-instructions.show {
+            display: block;
+        }
+
+        /* تحسينات الموبايل */
+        @media (max-width: 768px) {
+            .game-header {
+                top: 3px;
+                padding: 4px 8px;
+                gap: 8px;
+                font-size: 10px;
+                flex-wrap: wrap;
+            }
+
+            .game-container {
+                padding: 5px;
+                margin: 2px;
+                max-width: 100vw;
+                box-sizing: border-box;
+            }
+
+            .game-area {
+                height: 65vh;
+                min-height: 350px;
+                margin: 5px 0;
+            }
+
+            .basket {
+                width: 80px;
+                height: 60px;
+                bottom: 15px;
+                transition: left 0.03s ease-out;
+            }
+
+            .basket::before {
+                height: 18px;
+                top: -12px;
+                left: 6px;
+                right: 6px;
+            }
+
+            .basket::after {
+                height: 10px;
+                top: -6px;
+                left: 10px;
+                right: 10px;
+            }
+
+            .game-item {
+                font-size: 28px;
+            }
+
+            .fruit, .bad-fruit {
+                width: 35px;
+                height: 35px;
+            }
+
+            .start-screen {
+                padding: 10px;
+                margin: 5px;
+            }
+
+            .start-screen h1 {
+                font-size: 1.3em;
+                margin-bottom: 8px;
+            }
+
+            .start-screen p {
+                font-size: 0.8em;
+                margin-bottom: 6px;
+            }
+
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.8em;
+                margin: 4px;
+                border-radius: 8px;
+            }
+
+            .bomb {
+                width: 40px;
+                height: 40px;
+            }
+
+            .combo-basket {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .fruit-salad {
+                width: 70px;
+                height: 70px;
+            }
+
+            .gift-trap {
+                width: 50px;
+                height: 50px;
+            }
+
+            .mystery-box, .mystery-gift, .mystery-mail {
+                width: 45px;
+                height: 45px;
+            }
+
+            .mystery-box::before, .mystery-gift::before, .mystery-mail::before {
+                font-size: 16px;
+            }
+
+            .diamond, .crystal, .gold-bag {
+                width: 40px;
+                height: 40px;
+            }
+
+            .rare-coin, .trophy {
+                width: 45px;
+                height: 45px;
+            }
+
+            .star, .super-star, .sparkle {
+                width: 35px;
+                height: 35px;
+            }
+        }
+
+        .combo-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 1500;
+            animation: comboFlash 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes comboFlash {
+            0% { 
+                transform: translate(-50%, -50%) scale(0) rotate(-180deg); 
+                opacity: 0; 
+                color: #ffd700;
+            }
+            25% { 
+                transform: translate(-50%, -50%) scale(1.5) rotate(-90deg); 
+                opacity: 1; 
+                color: #ff6b6b;
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.2) rotate(0deg); 
+                opacity: 1; 
+                color: #4ecdc4;
+            }
+            75% { 
+                transform: translate(-50%, -50%) scale(1.3) rotate(90deg); 
+                opacity: 1; 
+                color: #a8e6cf;
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1) rotate(180deg); 
+                opacity: 0; 
+                color: #ffd700;
+            }
+        }
+
+        .screen-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1200;
+            animation: flashEffect 0.3s ease-out;
+        }
+
+        @keyframes flashEffect {
+            0% { background: transparent; }
+            50% { background: rgba(255, 255, 255, 0.8); }
+            100% { background: transparent; }
+        }
+
+        .screen-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+            20%, 40%, 60%, 80% { transform: translateX(2px); }
+        }
+
+        .score-popup.shield {
+            color: #4ecdc4 !important;
+            text-shadow: 0 0 8px #4ecdc4, 0 0 12px #4ecdc4;
+            font-weight: bold;
+            background: rgba(78, 205, 196, 0.2);
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: 5px 10px;
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <!-- معلومات اللاعب -->
+        <div id="player-header-container"></div>
+
+        <!-- شاشة البداية -->
+        <div class="start-screen" id="startScreen">
+            <h1 class="game-title">🍎 لعبة قطف الفواكه المطورة 🍊</h1>
+            <div class="game-instructions" id="gameInstructions">
+                <p><span id="controlText">حرك الفأرة لتحريك السلة</span> واقطف أكبر عدد من الفواكه!</p>
+                <p><strong>العناصر الجديدة:</strong></p>
+                <p>🍎🍊🍌🍇 فواكه طازجة = نقاط وذهب</p>
+                <p>🤢 فواكه تالفة = تفقدك نقاط وذهب</p>
+                <p>💣 قنابل = تخصم من عملاتك!</p>
+                <p>🎁 سلة فواكه = مكافأة كبيرة</p>
+                <p>🥗 سلطة فواكه = مكافأة عملاقة ولؤلؤة!</p>
+                <p><strong>العملات:</strong> 🪙 ذهب للعب | 🦪 لؤلؤ للمميزات الخاصة</p>
+            </div>
+            <button class="btn" onclick="enableAudio(); playSound('click'); startGame()">ابدأ اللعب</button>
+            <button class="btn" onclick="toggleSound()" id="sound-btn">🔊 الصوت</button>
+        </div>
+
+        <!-- رأس اللعبة -->
+        <div class="game-header">
+            <div class="score-item">
+                <span class="score-value" id="score">0</span>
+                <span>النقاط</span>
+            </div>
+            <div class="score-item">
+                <span class="score-value" id="level">1</span>
+                <span>المستوى</span>
+            </div>
+            <div class="score-item">
+                <span class="score-value" id="combo">0</span>
+                <span>كومبو</span>
+            </div>
+            <button class="mute-btn" onclick="toggleMute()" title="كتم/إلغاء كتم الصوت" id="muteBtn">
+                🔊
+            </button>
+            <button class="home-btn" onclick="console.log('زر العودة تم الضغط عليه'); goToMainPage();" title="العودة للصفحة الرئيسية">
+                🏠
+            </button>
+        </div>
+
+
+
+        <!-- السلة -->
+        <div class="basket" id="basket"></div>
+
+        <!-- إرشادات الجوال -->
+        <div class="mobile-instructions" id="mobileInstructions">
+            حرك إصبعك لتحريك السلة 👆
+        </div>
+
+        <!-- شاشة انتهاء اللعبة -->
+        <div class="game-over" id="gameOver">
+            <h2>انتهت اللعبة!</h2>
+            <p>النقاط النهائية: <span id="finalScore">0</span></p>
+            <p>أعلى كومبو: <span id="finalCombo">0</span></p>
+            <p>ذهب مكتسب: <span id="goldEarned">0</span> 🪙</p>
+            <p>لؤلؤ مكتسب: <span id="pearlsEarned">0</span> 🦪</p>
+            <button class="btn" onclick="restartGame()">العب مرة أخرى</button>
+            <button class="btn" onclick="goToMainPage()">🏠 الصفحة الرئيسية</button>
+            <button class="btn" onclick="goHome()">العودة للقائمة</button>
+        </div>
+
+        <!-- منطقة التحكم باللمس -->
+        <div class="touch-control-area"></div>
+
+        <!-- مؤثر المطر -->
+        <div class="rain-container" id="rainContainer"></div>
+    </div>
+
+    <script>
+        // نظام الأصوات الجديد
+        let audioContext;
+        let audioInitialized = false;
+
+        // تهيئة نظام الصوت
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('🔊 تم تهيئة نظام الصوت - لعبة الفواكه');
+            } catch (error) {
+                console.log('🔇 Web Audio API غير مدعوم');
+                if (window.gameState) gameState.soundEnabled = false;
+            }
+        }
+
+        // تفعيل AudioContext عند أول تفاعل
+        function enableAudio() {
+            if (!audioInitialized && audioContext) {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        audioInitialized = true;
+                        console.log('🔊 تم تفعيل نظام الصوت - لعبة الفواكه');
+                        setTimeout(() => playSound('click'), 100);
+                    });
+                } else {
+                    audioInitialized = true;
+                    console.log('🔊 نظام الصوت جاهز - لعبة الفواكه');
+                }
+            }
+        }
+
+        // دالة تبديل الصوت
+        function toggleSound() {
+            enableAudio();
+
+            if (window.gameState) {
+                gameState.soundEnabled = !gameState.soundEnabled;
+                const soundBtn = document.getElementById('sound-btn');
+
+                if (gameState.soundEnabled) {
+                    soundBtn.textContent = '🔊 الصوت';
+                    soundBtn.style.opacity = '1';
+                    setTimeout(() => playSound('click'), 100);
+                } else {
+                    soundBtn.textContent = '🔇 صامت';
+                    soundBtn.style.opacity = '0.6';
+                }
+
+                localStorage.setItem('fruit-catching-sound-enabled', gameState.soundEnabled);
+            }
+        }
+
+        // إنشاء الأصوات باستخدام Web Audio API (سيتم تهيئته لاحقاً)
+        let audioContextOld;
+        
+        // وظائف إنشاء الأصوات
+        function createTone(frequency, duration, type = 'sine') {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // أصوات اللعبة
+        const gameSounds = {
+            catchFruit: () => {
+                const notes = [523.25, 659.25, 783.99];
+                const randomNote = notes[Math.floor(Math.random() * notes.length)];
+                createTone(randomNote, 0.2, 'sine');
+            },
+            catchSpecial: () => {
+                // لحن أكثر تعقيداً للعناصر الخاصة
+                const melody = [659.25, 783.99, 1046.50, 1318.51];
+                melody.forEach((note, index) => {
+                    setTimeout(() => createTone(note, 0.15, 'triangle'), index * 60);
+                });
+            },
+            catchBad: () => {
+                // صوت أكثر إزعاجاً للفواكه التالفة
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => createTone(220 - i * 50, 0.1, 'sawtooth'), i * 100);
+                }
+            },
+            bomb: () => {
+                // انفجار أكثر إثارة
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        createTone(80 + Math.random() * 300, 0.08, 'square');
+                        createTone(150 + Math.random() * 200, 0.06, 'sawtooth');
+                    }, i * 30);
+                }
+            },
+            shield_block: () => {
+                // صوت حماية الدرع
+                for (let i = 0; i < 4; i++) {
+                    setTimeout(() => {
+                        createTone(440 + i * 110, 0.1, 'triangle');
+                        createTone(880 + i * 55, 0.08, 'sine');
+                    }, i * 50);
+                }
+            },
+            combo: () => {
+                // كومبو مثير مع أصوات متعددة
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; 
+                notes.forEach((note, index) => {
+                    setTimeout(() => {
+                        createTone(note, 0.12, 'triangle');
+                        createTone(note * 1.5, 0.08, 'sine');
+                    }, index * 60);
+                });
+            },
+            levelUp: () => {
+                // ترقية مستوى مع فرحة كبيرة
+                const melody = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+                melody.forEach((note, index) => {
+                    setTimeout(() => {
+                        createTone(note, 0.25, 'sine');
+                        createTone(note / 2, 0.15, 'triangle');
+                    }, index * 100);
+                });
+            },
+            perfectCatch: () => {
+                // صوت خاص للقطف المثالي
+                const harmony = [523.25, 659.25, 783.99];
+                harmony.forEach(note => {
+                    createTone(note, 0.3, 'sine');
+                });
+            }
+        };
+
+        // تشغيل الصوت مع معالجة الأخطاء والكتم (النظام القديم)
+        function playSoundOld(soundName) {
+            // التحقق من حالة الكتم
+            if (gameState.isMuted) {
+                return;
+            }
+
+            try {
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                if (gameSounds[soundName]) {
+                    gameSounds[soundName]();
+                }
+            } catch (error) {
+                console.log('خطأ في تشغيل الصوت:', error);
+            }
+        }
+
+        // إضافة تأثيرات بصرية مثيرة
+        function createScreenFlash(color = 'rgba(255, 255, 255, 0.8)') {
+            const flash = document.createElement('div');
+            flash.className = 'screen-flash';
+            flash.style.background = color;
+            gameContainer.appendChild(flash);
+            
+            setTimeout(() => {
+                if (flash.parentNode) {
+                    flash.parentNode.removeChild(flash);
+                }
+            }, 300);
+        }
+
+        function shakeScreen() {
+            gameContainer.classList.add('screen-shake');
+            setTimeout(() => {
+                gameContainer.classList.remove('screen-shake');
+            }, 500);
+        }
+
+        function createParticleExplosion(x, y, color = '#ffd700') {
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: absolute;
+                    left: ${x}px;
+                    top: ${y}px;
+                    width: 6px;
+                    height: 6px;
+                    background: ${color};
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 200;
+                `;
+                
+                gameContainer.appendChild(particle);
+                
+                const angle = (i * 45) * Math.PI / 180;
+                const distance = 50 + Math.random() * 50;
+                const targetX = x + Math.cos(angle) * distance;
+                const targetY = y + Math.sin(angle) * distance;
+                
+                particle.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${targetX - x}px, ${targetY - y}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 800,
+                    easing: 'ease-out'
+                }).onfinish = () => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                };
+            }
+        }
+
+        // إعدادات اللعبة
+        let gameState = {
+            score: 0,
+            level: 1,
+            combo: 0,
+            maxCombo: 0,
+            goldCoins: 10000,
+            pearls: 10,
+            userShield: null, // معلومات الدرع الواقي
+            goldEarned: 0,
+            pearlsEarned: 0,
+            // العناصر الجديدة المكتسبة
+            diamondsEarned: 0,
+            crystalsEarned: 0,
+            rareCoinsEarned: 0,
+            trophiesEarned: 0,
+            starsEarned: 0,
+            superStarsEarned: 0,
+            sparklesEarned: 0,
+            isPlaying: false,
+            gameSpeed: 3000,
+            spawnRate: 1800,
+            gameItems: [],
+            syncInterval: null,
+            isMuted: false,
+            economySession: null,
+            betAmount: 30, // تكلفة اللعب
+            soundEnabled: true // تفعيل الأصوات
+        };
+
+        // (تم نقل دوال الصوت إلى أعلى)
+
+        // دالة توليد الأصوات
+        function playSound(type) {
+            if (!gameState.soundEnabled || !audioContext) return;
+
+            // تفعيل الصوت إذا لم يكن مفعلاً
+            if (!audioInitialized) {
+                enableAudio();
+                return;
+            }
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // تحديد نوع الصوت حسب الحدث
+                switch(type) {
+                    case 'click':
+                        // صوت نقرة عادية
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'catchFruit':
+                        // صوت جمع فاكهة
+                        oscillator.frequency.setValueAtTime(500, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.2);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        oscillator.type = 'triangle';
+                        break;
+
+                    case 'catchBad':
+                        // صوت جمع عنصر سيء
+                        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        oscillator.type = 'sawtooth';
+                        break;
+
+                    case 'catchSpecial':
+                        // صوت جمع عنصر خاص
+                        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.25);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+                        oscillator.type = 'square';
+                        break;
+
+                    case 'bomb':
+                        // صوت انفجار
+                        oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.4);
+                        gainNode.gain.setValueAtTime(0.6, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                        oscillator.type = 'sawtooth';
+                        break;
+
+                    case 'levelUp':
+                        // صوت ارتقاء مستوى
+                        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'gameStart':
+                        // صوت بداية اللعبة
+                        oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(660, audioContext.currentTime + 0.4);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                        oscillator.type = 'triangle';
+                        break;
+
+                    case 'gameEnd':
+                        // صوت نهاية اللعبة
+                        oscillator.frequency.setValueAtTime(660, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(165, audioContext.currentTime + 0.6);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+                        oscillator.type = 'sine';
+                        break;
+
+                    default:
+                        return;
+                }
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.6);
+
+            } catch (error) {
+                console.log('🔇 خطأ في تشغيل الصوت');
+            }
+        }
+
+        // (دالة toggleSound موجودة في الأعلى)
+
+        // استعادة إعدادات الصوت
+        function restoreSoundSettings() {
+            const savedSetting = localStorage.getItem('fruit-catching-sound-enabled');
+            if (savedSetting !== null) {
+                gameState.soundEnabled = savedSetting === 'true';
+            }
+
+            const soundBtn = document.getElementById('sound-btn');
+            if (gameState.soundEnabled) {
+                soundBtn.textContent = '🔊 الصوت';
+                soundBtn.style.opacity = '1';
+            } else {
+                soundBtn.textContent = '🔇 صامت';
+                soundBtn.style.opacity = '0.6';
+            }
+        }
+
+        // إظهار رسالة تفعيل الصوت
+        function showAudioNotice() {
+            if (gameState.soundEnabled && !audioInitialized) {
+                const notice = document.getElementById('audio-notice');
+                if (notice) {
+                    notice.style.display = 'block';
+                }
+            }
+        }
+
+        // إخفاء رسالة تفعيل الصوت
+        function hideAudioNotice() {
+            const notice = document.getElementById('audio-notice');
+            if (notice) {
+                notice.style.display = 'none';
+            }
+        }
+
+        // أنواع العناصر - جوائز بالمئات والآلاف
+        const gameElements = {
+            fruits: [
+                { emoji: '🍎', points: 150, gold: 50, type: 'fruit' },
+                { emoji: '🍊', points: 200, gold: 75, type: 'fruit' },
+                { emoji: '🍌', points: 250, gold: 100, type: 'fruit' },
+                { emoji: '🍇', points: 300, gold: 125, type: 'fruit' }
+            ],
+            badFruits: [
+                { emoji: '🤢', points: -400, gold: -150, type: 'bad' },
+                { emoji: '🦠', points: -500, gold: -200, type: 'bad' }
+            ],
+            bombs: [
+                { emoji: '💣', type: 'bomb' }
+            ],
+            special: [
+                { emoji: '🎁', points: 1000, gold: 500, type: 'combo-basket' },
+                { emoji: '🥗', points: 2000, gold: 800, pearls: 5, type: 'fruit-salad' }
+            ],
+            traps: [
+                { emoji: '🎀', points: -800, gold: -300, type: 'gift-trap', description: 'هدية ملغمة!' }
+            ],
+            mysteryBoxes: [
+                { emoji: '📦', type: 'mystery-box', description: 'صندوق مفاجآت!' },
+                { emoji: '🎁', type: 'mystery-gift', description: 'هدية مفاجآت!' },
+                { emoji: '📮', type: 'mystery-mail', description: 'صندوق بريد مفاجآت!' }
+            ],
+            treasures: [
+                { emoji: '💎', points: 1500, gold: 750, diamonds: 3, type: 'diamond', description: 'جوهرة ثمينة!' },
+                { emoji: '🔮', points: 2000, gold: 1000, crystals: 2, type: 'crystal', description: 'كريستال سحري!' },
+                { emoji: '💰', points: 1000, gold: 1500, type: 'gold-bag', description: 'كيس ذهب!' }
+            ],
+            rareCurrency: [
+                { emoji: '🪙', points: 3000, gold: 2000, rareCoins: 5, type: 'rare-coin', description: 'عملة نادرة!' },
+                { emoji: '🏆', points: 5000, gold: 3000, pearls: 10, trophies: 2, type: 'trophy', description: 'كأس ذهبي!' }
+            ],
+            stars: [
+                { emoji: '⭐', points: 2500, gold: 1200, stars: 3, type: 'star', description: 'نجمة ذهبية!' },
+                { emoji: '🌟', points: 4000, gold: 2000, pearls: 5, superStars: 2, type: 'super-star', description: 'نجمة خارقة!' },
+                { emoji: '✨', points: 1800, gold: 900, sparkles: 4, type: 'sparkle', description: 'بريق سحري!' }
+            ],
+            treasures: [
+                { emoji: '💎', points: 150, gold: 50, type: 'diamond', description: 'جوهرة ثمينة!' },
+                { emoji: '🔮', points: 200, gold: 75, type: 'crystal', description: 'كريستال سحري!' },
+                { emoji: '💰', points: 100, gold: 100, type: 'gold-bag', description: 'كيس ذهب!' }
+            ],
+            rareCurrency: [
+                { emoji: '🪙', points: 300, gold: 150, type: 'rare-coin', description: 'عملة نادرة!' },
+                { emoji: '🏆', points: 500, gold: 200, pearls: 2, type: 'trophy', description: 'كأس ذهبي!' }
+            ],
+            stars: [
+                { emoji: '⭐', points: 250, gold: 80, type: 'star', description: 'نجمة ذهبية!' },
+                { emoji: '🌟', points: 400, gold: 120, pearls: 1, type: 'super-star', description: 'نجمة خارقة!' },
+                { emoji: '✨', points: 180, gold: 60, type: 'sparkle', description: 'بريق سحري!' }
+            ],
+            boobyFruits: [
+                { emoji: '🍎', points: -30, gold: -8, type: 'booby-fruit', description: 'تفاحة ملغومة!' },
+                { emoji: '🍊', points: -25, gold: -6, type: 'booby-fruit', description: 'برتقالة ملغومة!' },
+                { emoji: '🍌', points: -35, gold: -10, type: 'booby-fruit', description: 'موزة ملغومة!' },
+                { emoji: '🍇', points: -40, gold: -12, type: 'booby-fruit', description: 'عنب ملغوم!' }
+            ]
+        };
+
+        // عناصر اللعبة
+        const gameContainer = document.getElementById('gameContainer');
+        const basket = document.getElementById('basket');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOver');
+
+        // تحديث العرض
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('combo').textContent = gameState.combo;
+        }
+
+        // تحديث العملات من السيرفر
+        async function updateCurrencyFromServer() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('لا يوجد رمز مصادقة');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/currency', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await response.json();
+                        gameState.goldCoins = data.goldCoins || 0;
+                        gameState.pearls = data.pearls || 0;
+                        updateDisplay();
+                        console.log('تم تحديث العملات بنجاح');
+                    } else {
+                        console.log('استجابة غير صحيحة من الخادم');
+                    }
+                } else {
+                    console.log('خطأ في الاستجابة:', response.status);
+                }
+            } catch (error) {
+                console.log('خطأ في تحديث العملات:', error);
+            }
+        }
+
+        async function updateShieldFromServer() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('لا يوجد رمز مصادقة للدرع');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (userData.id) {
+                        const shieldResponse = await fetch(`/api/profile/shield/${userData.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (shieldResponse.ok) {
+                            const data = await shieldResponse.json();
+                            gameState.userShield = data.shield;
+                            console.log('تم تحديث معلومات الدرع');
+                        } else {
+                            console.log('خطأ في جلب معلومات الدرع:', shieldResponse.status);
+                        }
+                    }
+                } else {
+                    console.log('خطأ في جلب بيانات المستخدم:', response.status);
+                }
+            } catch (error) {
+                console.log('خطأ في تحديث معلومات الدرع:', error);
+            }
+        }
+
+        // موسيقى خلفية مثيرة
+        let backgroundMusic;
+        function startBackgroundMusic() {
+            // لا تشغل الموسيقى إذا كان الصوت مكتوم
+            if (backgroundMusic || gameState.isMuted) return;
+
+            const bassNotes = [130.81, 146.83, 164.81, 174.61]; // C3, D3, E3, F3
+            let noteIndex = 0;
+
+            backgroundMusic = setInterval(() => {
+                if (!gameState.isPlaying || gameState.isMuted) return;
+
+                const note = bassNotes[noteIndex % bassNotes.length];
+                createTone(note, 0.3, 'triangle');
+                createTone(note * 2, 0.2, 'sine');
+
+                noteIndex++;
+            }, 800);
+        }
+        
+        function stopBackgroundMusic() {
+            if (backgroundMusic) {
+                clearInterval(backgroundMusic);
+                backgroundMusic = null;
+            }
+        }
+
+        // بدء اللعبة
+        function startGame() {
+            // تشغيل الصوت عند بدء اللعبة
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
+            startScreen.style.display = 'none';
+            gameState.isPlaying = true;
+
+            // تشغيل صوت بداية اللعبة
+            playSound('gameStart');
+            
+            // بدء الموسيقى الخلفية
+            startBackgroundMusic();
+            gameState.score = 0;
+            gameState.level = 1;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.goldEarned = 0;
+            gameState.pearlsEarned = 0;
+            // إعادة تعيين العناصر الجديدة
+            gameState.diamondsEarned = 0;
+            gameState.crystalsEarned = 0;
+            gameState.rareCoinsEarned = 0;
+            gameState.trophiesEarned = 0;
+            gameState.starsEarned = 0;
+            gameState.superStarsEarned = 0;
+            gameState.sparklesEarned = 0;
+            gameState.gameSpeed = 3000;
+            gameState.spawnRate = 1800;
+            gameState.gameItems = [];
+            
+            // تعيين موضع السلة الابتدائي
+            initializeBasketPosition();
+
+            updateDisplay();
+            updateCurrencyFromServer();
+            updateShieldFromServer();
+
+            // بدء المزامنة الدورية للعملات (كل 30 ثانية)
+            if (gameState.syncInterval) {
+                clearInterval(gameState.syncInterval);
+            }
+            gameState.syncInterval = setInterval(() => {
+                if (gameState.isPlaying) {
+                    syncCurrencyRealTime();
+                }
+            }, 30000);
+
+            // إظهار إرشادات الجوال
+            if (isMobileDevice()) {
+                const instructions = document.getElementById('mobileInstructions');
+                instructions.classList.add('show');
+                setTimeout(() => {
+                    instructions.classList.remove('show');
+                }, 4000);
+            }
+
+            // بدء إنتاج العناصر
+            setTimeout(spawnGameItem, 1000);
+
+            // بدء مؤثر المطر
+            initializeRain();
+        }
+
+        // إنتاج عنصر جديد مع تحسين الأداء
+        function spawnGameItem() {
+            if (!gameState.isPlaying) return;
+
+            // استخدام النظام المحسن لإنشاء العناصر
+            const item = createGameItemOptimized();
+            let itemData;
+            let elementClass = 'game-item';
+
+            // تحديد نوع العنصر بناءً على ذكاء الربح والخسارة
+            const rand = Math.random();
+
+            // تحسين الاحتمالية بناءً على أداء اللاعب والمستوى
+            let fruitChance = Math.max(0.35, 0.55 - (gameState.level * 0.02)); // تقليل الفواكه مع المستوى
+            let badFruitChance = Math.min(0.20, 0.12 + (gameState.level * 0.01)); // زيادة الفواكه التالفة
+            let bombChance = Math.min(0.25, 0.13 + (gameState.level * 0.015)); // زيادة القنابل
+            let specialChance = 0.08;
+            let trapChance = Math.min(0.12, 0.07 + (gameState.level * 0.005)); // زيادة الفخاخ
+            let mysteryChance = 0.05;
+            let treasureChance = Math.min(0.08, gameState.level > 3 ? 0.03 + (gameState.level * 0.005) : 0); // الكنوز من المستوى 4
+            let rareCurrencyChance = Math.min(0.05, gameState.level > 7 ? 0.02 + (gameState.level * 0.003) : 0); // العملة النادرة من المستوى 8
+            let starChance = Math.min(0.06, gameState.level > 5 ? 0.02 + (gameState.level * 0.004) : 0); // النجوم من المستوى 6
+
+            // تعديل الاحتمالية بناءً على الكومبو
+            if (gameState.combo > 10) {
+                // إذا كان الكومبو عالي، زيادة فرصة العناصر النادرة
+                treasureChance += 0.02;
+                rareCurrencyChance += 0.01;
+                starChance += 0.015;
+                specialChance += 0.02;
+                fruitChance -= 0.065;
+            } else if (gameState.combo < 3) {
+                // إذا كان الكومبو منخفض، تقليل الخطر
+                bombChance -= 0.03;
+                trapChance -= 0.02;
+                mysteryChance += 0.01;
+                fruitChance += 0.04;
+            }
+
+            // تطبيق الاحتماليات
+            let currentChance = 0;
+
+            if (rand < (currentChance += fruitChance)) {
+                // فواكه طبيعية
+                itemData = gameElements.fruits[Math.floor(Math.random() * gameElements.fruits.length)];
+                elementClass += ' fruit';
+            } else if (rand < (currentChance += badFruitChance)) {
+                // فواكه تالفة
+                itemData = gameElements.badFruits[Math.floor(Math.random() * gameElements.badFruits.length)];
+                elementClass += ' bad-fruit';
+            } else if (rand < (currentChance += bombChance)) {
+                // قنابل
+                itemData = gameElements.bombs[0];
+                elementClass += ' bomb';
+            } else if (rand < (currentChance += trapChance)) {
+                // هدية ملغمة (فخ)
+                itemData = gameElements.traps[0];
+                elementClass += ' gift-trap';
+            } else if (rand < (currentChance += mysteryChance)) {
+                // صناديق المفاجآت
+                itemData = gameElements.mysteryBoxes[Math.floor(Math.random() * gameElements.mysteryBoxes.length)];
+                elementClass += ` ${itemData.type}`;
+            } else if (rand < (currentChance += treasureChance)) {
+                // الكنوز (جواهر، كريستال، كيس ذهب)
+                itemData = gameElements.treasures[Math.floor(Math.random() * gameElements.treasures.length)];
+                elementClass += ` ${itemData.type}`;
+            } else if (rand < (currentChance += rareCurrencyChance)) {
+                // العملة النادرة (عملة نادرة، كأس)
+                itemData = gameElements.rareCurrency[Math.floor(Math.random() * gameElements.rareCurrency.length)];
+                elementClass += ` ${itemData.type}`;
+            } else if (rand < (currentChance += starChance)) {
+                // النجوم (نجمة، نجمة خارقة، بريق)
+                itemData = gameElements.stars[Math.floor(Math.random() * gameElements.stars.length)];
+                elementClass += ` ${itemData.type}`;
+            } else {
+                // عناصر خاصة
+                itemData = gameElements.special[Math.floor(Math.random() * gameElements.special.length)];
+                elementClass += ` ${itemData.type}`;
+            }
+
+            item.className = elementClass;
+            if (itemData.emoji) {
+                item.textContent = itemData.emoji;
+            }
+
+            // حفظ بيانات العنصر
+            Object.assign(item.dataset, itemData);
+
+            // موضع عشوائي عبر الشاشة
+            const itemWidth = window.innerWidth <= 768 ? 45 : 55;
+            const maxX = window.innerWidth - itemWidth;
+            const randomX = Math.random() * maxX;
+            item.style.left = randomX + 'px';
+            item.style.top = '-70px'; // استخدام top للبساطة
+
+            // إضافة العنصر للقائمة النشطة
+            gameState.gameItems.push(item);
+
+            // تحريك العنصر لأسفل
+            animateGameItem(item);
+
+            // إنتاج العنصر التالي مع زيادة السرعة حسب المستوى
+            const baseDelay = 1200;
+            const levelSpeedReduction = gameState.level * 80; // تقليل أكبر للتأخير
+            const nextDelay = Math.max(400, baseDelay - levelSpeedReduction); // حد أدنى 400ms
+            setTimeout(spawnGameItem, nextDelay);
+        }
+
+        // قائمة العناصر النشطة للتنظيف
+        const activeItems = new Set();
+
+        // تحريك عنصر اللعبة بطريقة بسيطة وفعالة
+        function animateGameItem(item) {
+            let position = parseInt(item.style.top) || -70;
+            activeItems.add(item);
+
+            function animate() {
+                if (!gameState.isPlaying || !item.parentNode || !activeItems.has(item)) {
+                    activeItems.delete(item);
+                    return;
+                }
+
+                // تحريك العنصر لأسفل مع زيادة السرعة حسب المستوى
+                const baseSpeed = 3;
+                const levelSpeedBonus = Math.min(4, gameState.level * 0.3); // زيادة تدريجية
+                const totalSpeed = baseSpeed + levelSpeedBonus;
+
+                position += totalSpeed;
+                item.style.top = position + 'px';
+
+                // فحص التصادم
+                if (checkCollision(item, basket)) {
+                    catchItem(item);
+                    activeItems.delete(item);
+                    return;
+                }
+
+                // إذا وصل لأسفل الشاشة
+                if (position > window.innerHeight) {
+                    if (item.dataset.type === 'fruit') {
+                        resetCombo();
+                    }
+                    removeGameItem(item);
+                    activeItems.delete(item);
+                    return;
+                }
+
+                // استمرار الحركة
+                setTimeout(animate, 16); // ~60 FPS
+            }
+
+            // بدء الحركة
+            animate();
+        }
+
+        // فحص التصادم الأصلي (للاستخدام العادي)
+        function checkCollision(element, basket) {
+            const elementRect = element.getBoundingClientRect();
+            const basketRect = basket.getBoundingClientRect();
+
+            return elementRect.bottom >= basketRect.top &&
+                   elementRect.left < basketRect.right &&
+                   elementRect.right > basketRect.left &&
+                   elementRect.top < basketRect.bottom;
+        }
+
+        // فحص التصادم المحسن للأداء
+        let basketRect = null;
+        let basketRectUpdateTime = 0;
+
+        function checkCollisionOptimized(element, basket) {
+            const currentTime = performance.now();
+
+            // تحديث موقع السلة كل 100ms فقط بدلاً من كل إطار
+            if (!basketRect || currentTime - basketRectUpdateTime > 100) {
+                basketRect = basket.getBoundingClientRect();
+                basketRectUpdateTime = currentTime;
+            }
+
+            // حساب موقع العنصر بناءً على transform
+            const elementRect = element.getBoundingClientRect();
+
+            // فحص مبسط للتصادم مع تحسين الأداء
+            const overlap = 10; // مساحة تداخل مطلوبة للقطف
+            return elementRect.bottom >= (basketRect.top - overlap) &&
+                   elementRect.left < (basketRect.right + overlap) &&
+                   elementRect.right > (basketRect.left - overlap) &&
+                   elementRect.top < (basketRect.bottom + overlap);
+        }
+
+        // دالة المزامنة الفورية للرصيد لمنع الغش
+        async function syncBalanceRealTime(points, gold, pearls, type) {
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.updatePlayerBalance === 'function') {
+                    // إنشاء نتيجة مؤقتة للعنصر الواحد
+                    const tempResult = {
+                        isWin: points > 0 && gold > 0,
+                        winAmount: Math.max(0, gold),
+                        lossAmount: Math.max(0, -gold),
+                        playerScore: gameState.score,
+                        skillFactor: gameState.combo / 10 + 1.0,
+                        economicFactor: 1.0,
+                        probability: type === 'fruit' ? 0.8 : (type === 'bad' ? 0.2 : 0.5),
+                        realTimeSync: true // علامة للمزامنة الفورية
+                    };
+
+                    const balanceUpdate = await window.gameEconomy.updatePlayerBalance(tempResult);
+                    if (balanceUpdate && balanceUpdate.success) {
+                        // تحديث عرض الرصيد في الهيدر فورياً
+                        if (window.playerHeader && typeof window.playerHeader.updateBalance === 'function') {
+                            window.playerHeader.updateBalance(balanceUpdate.newBalance);
+                        }
+
+                        // تسجيل المزامنة للمراقبة
+                        console.log(`🔄 مزامنة فورية: ${gold > 0 ? '+' : ''}${gold} ذهب | رصيد جديد: ${balanceUpdate.newBalance}`);
+                    }
+                }
+            } catch (error) {
+                // في حالة فشل المزامنة، إيقاف اللعبة لمنع الغش
+                console.error('⚠️ فشل في المزامنة الفورية - إيقاف اللعبة');
+                gameState.isPlaying = false;
+                clearInterval(gameState.gameTimer);
+                clearInterval(gameState.spawnTimer);
+                alert('حدث خطأ في الاتصال. تم إيقاف اللعبة للحفاظ على الأمان.');
+            }
+        }
+
+        // قطف عنصر
+        async function catchItem(item) {
+            const type = item.dataset.type;
+            const points = parseInt(item.dataset.points) || 0;
+            const gold = parseInt(item.dataset.gold) || 0;
+            const pearls = parseInt(item.dataset.pearls) || 0;
+
+            // استخراج بيانات العناصر الجديدة
+            const diamonds = parseInt(item.dataset.diamonds) || 0;
+            const crystals = parseInt(item.dataset.crystals) || 0;
+            const rareCoins = parseInt(item.dataset.rareCoins) || 0;
+            const trophies = parseInt(item.dataset.trophies) || 0;
+            const stars = parseInt(item.dataset.stars) || 0;
+            const superStars = parseInt(item.dataset.superStars) || 0;
+            const sparkles = parseInt(item.dataset.sparkles) || 0;
+            
+            if (type === 'bomb') {
+                // خصم العملات عند قطف قنبلة
+                const goldLoss = Math.min(gameState.goldCoins, 50 + (gameState.level * 10)); // خسارة متزايدة حسب المستوى
+                const pearlLoss = gameState.pearls > 0 ? 1 : 0; // خسارة لؤلؤة واحدة إن وجدت
+
+                gameState.goldEarned -= goldLoss;
+                gameState.pearlsEarned -= pearlLoss;
+
+                resetCombo();
+
+                playSound('bomb');
+
+                // تأثيرات انفجار مثيرة للقنابل
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ff4757');
+                createScreenFlash('rgba(255, 71, 87, 0.7)');
+                shakeScreen();
+
+                // انفجار ثانوی أكبر
+                setTimeout(() => {
+                    createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ffa502');
+                }, 200);
+
+                showScorePopup(item, `-${goldLoss} 🪙`, 'negative');
+                if (pearlLoss > 0) {
+                    showScorePopup(item, `-${pearlLoss} 🦪`, 'negative', 30);
+                }
+                showComboIndicator('انفجار! 💥');
+
+                removeGameItem(item);
+                updateDisplay();
+                return;
+            }
+
+            if (type === 'gift-trap') {
+                // الهدية الملغمة - فخ خادع!
+                const goldLoss = Math.min(gameState.goldCoins, 15 + (gameState.level * 5));
+
+                gameState.goldEarned -= goldLoss;
+                gameState.score += points; // نقاط سالبة
+
+                // تقليل الكومبو بدلاً من إعادة تعيينه
+                gameState.combo = Math.max(0, gameState.combo - 3);
+
+                playSound('bomb'); // نفس صوت القنبلة
+
+                // تأثيرات بصرية مميزة للفخ
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#e74c3c');
+                createScreenFlash('rgba(231, 76, 60, 0.5)');
+
+                // تأثير إضافي للخداع
+                setTimeout(() => {
+                    createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#8e44ad');
+                }, 150);
+
+                showScorePopup(item, `فخ! -${goldLoss} 🪙`, 'negative');
+                showComboIndicator('هدية ملغمة! 🎀💥');
+
+                removeGameItem(item);
+                updateDisplay();
+                return;
+            }
+
+            if (type === 'mystery-box' || type === 'mystery-gift' || type === 'mystery-mail') {
+                // صندوق المفاجآت - مكافأة أو خسارة عشوائية!
+                const surpriseRand = Math.random();
+                const rect = item.getBoundingClientRect();
+
+                // 60% مكافأة، 40% خسارة
+                if (surpriseRand < 0.6) {
+                    // مكافأة! 🎉
+                    const bonusPoints = 50 + Math.floor(Math.random() * 100); // 50-150 نقطة
+                    const bonusGold = 10 + Math.floor(Math.random() * 20); // 10-30 ذهب
+                    const bonusPearls = Math.random() < 0.3 ? 1 : 0; // 30% فرصة للؤلؤة
+
+                    gameState.score += bonusPoints;
+                    gameState.goldEarned += bonusGold;
+                    if (bonusPearls > 0) {
+                        gameState.pearlsEarned += bonusPearls;
+                    }
+                    gameState.combo += 2; // مكافأة كومبو
+
+                    playSound('special');
+
+                    // تأثيرات بصرية للمكافأة
+                    createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#f39c12');
+                    createScreenFlash('rgba(243, 156, 18, 0.4)');
+
+                    setTimeout(() => {
+                        createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#27ae60');
+                    }, 100);
+
+                    showScorePopup(item, `+${bonusPoints} 🎯`, 'positive');
+                    showScorePopup(item, `+${bonusGold} 🪙`, 'positive', 25);
+                    if (bonusPearls > 0) {
+                        showScorePopup(item, `+${bonusPearls} 🦪`, 'pearl', 50);
+                    }
+                    showComboIndicator('مفاجأة رائعة! 📦✨');
+
+                } else {
+                    // خسارة! 😱
+                    const lossPoints = 20 + Math.floor(Math.random() * 40); // 20-60 نقطة
+                    const lossGold = 5 + Math.floor(Math.random() * 15); // 5-20 ذهب
+
+                    gameState.score -= lossPoints;
+                    gameState.goldEarned -= lossGold;
+                    gameState.combo = Math.max(0, gameState.combo - 1); // تقليل كومبو قليل
+
+                    playSound('bomb');
+
+                    // تأثيرات بصرية للخسارة
+                    createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#e74c3c');
+                    createScreenFlash('rgba(231, 76, 60, 0.3)');
+
+                    showScorePopup(item, `-${lossPoints} 🎯`, 'negative');
+                    showScorePopup(item, `-${lossGold} 🪙`, 'negative', 25);
+                    showComboIndicator('مفاجأة سيئة! 📦💥');
+                }
+
+                removeGameItem(item);
+                updateDisplay();
+                return;
+            }
+            
+            if (type === 'fruit') {
+                gameState.combo++;
+                const totalPoints = points + (gameState.combo * 5);
+                const totalGold = gold + Math.floor(gameState.combo / 3);
+
+                gameState.score += totalPoints;
+                gameState.goldEarned += totalGold;
+
+                // مزامنة فورية مع الرصيد
+                await syncBalanceRealTime(totalPoints, totalGold, 0, type);
+
+                playSound('catchFruit');
+                
+                // تأثيرات بصرية مثيرة للفواكه
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#4ecdc4');
+                
+                if (gameState.combo % 3 === 0) {
+                    playSound('perfectCatch');
+                    createScreenFlash('rgba(76, 205, 196, 0.4)');
+                }
+                
+                showScorePopup(item, `+${points + (gameState.combo * 5)}`, 'positive');
+                showScorePopup(item, `+${gold + Math.floor(gameState.combo / 3)} 🪙`, 'gold', 30);
+                
+                if (gameState.combo > 1 && gameState.combo % 5 === 0) {
+                    playSound('combo');
+                    createScreenFlash('rgba(255, 215, 0, 0.6)');
+                    shakeScreen();
+                    
+                    // رسائل تشجيعية حماسية
+                    const messages = [
+                        `كومبو ${gameState.combo}! 🔥`, 
+                        `رائع! ${gameState.combo} متتالية! ⚡`, 
+                        `لا تتوقف! ${gameState.combo}! 💪`,
+                        `مذهل! ${gameState.combo} كومبو! 🌟`
+                    ];
+                    const message = messages[Math.floor(Math.random() * messages.length)];
+                    showComboIndicator(message);
+                }
+            } else if (type === 'bad') {
+                gameState.score = Math.max(0, gameState.score + points);
+                gameState.goldEarned = Math.max(-gameState.goldCoins, gameState.goldEarned + gold);
+                resetCombo();
+
+                // مزامنة فورية مع الرصيد (خسارة)
+                await syncBalanceRealTime(points, gold, 0, type);
+
+                playSound('catchBad');
+                
+                // تأثيرات سلبية للفواكه التالفة
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ff6b6b');
+                createScreenFlash('rgba(255, 107, 107, 0.3)');
+                
+                showScorePopup(item, `${points}`, 'negative');
+                showScorePopup(item, `${gold} 🪙`, 'negative', 30);
+            } else if (type === 'combo-basket') {
+                const bonusPoints = points + (gameState.combo * 10);
+                const bonusGold = gold + (gameState.combo * 2);
+                
+                gameState.score += bonusPoints;
+                gameState.goldEarned += bonusGold;
+                gameState.combo += 3;
+                
+                playSound('catchSpecial');
+                
+                // تأثيرات مذهلة للسلة الذهبية
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ffd700');
+                createScreenFlash('rgba(255, 215, 0, 0.5)');
+                
+                showScorePopup(item, `+${bonusPoints}`, 'positive');
+                showScorePopup(item, `+${bonusGold} 🪙`, 'gold', 30);
+                showComboIndicator('سلة فواكه! ✨');
+            } else if (type === 'fruit-salad') {
+                const bonusPoints = points + (gameState.combo * 15);
+                const bonusGold = gold + (gameState.combo * 3);
+                
+                gameState.score += bonusPoints;
+                gameState.goldEarned += bonusGold;
+                gameState.pearlsEarned += pearls;
+                gameState.combo += 5;
+                
+                playSound('catchSpecial');
+                setTimeout(() => playSound('combo'), 300);
+                
+                // تأثيرات قوس قزح للسلطة المميزة
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ff6b6b');
+                setTimeout(() => createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#4ecdc4'), 100);
+                setTimeout(() => createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ffd700'), 200);
+                createScreenFlash('rgba(255, 255, 255, 0.8)');
+                shakeScreen();
+                
+                showScorePopup(item, `+${bonusPoints}`, 'positive');
+                showScorePopup(item, `+${bonusGold} 🪙`, 'gold', 30);
+                showScorePopup(item, `+${pearls} 🦪`, 'pearl', 60);
+                showComboIndicator('سلطة فواكه رائعة! 🌈');
+            } else if (type === 'diamond' || type === 'crystal' || type === 'gold-bag') {
+                // الكنوز
+                gameState.score += points;
+                gameState.goldEarned += gold;
+                gameState.combo += 1;
+
+                // إضافة العناصر للملف الشخصي
+                if (type === 'diamond' && diamonds > 0) {
+                    gameState.diamondsEarned += diamonds;
+                    showScorePopup(item, `+${diamonds} 💎`, 'treasure', 60);
+                } else if (type === 'crystal' && crystals > 0) {
+                    gameState.crystalsEarned += crystals;
+                    showScorePopup(item, `+${crystals} 🔮`, 'treasure', 60);
+                }
+
+                playSound('catchSpecial');
+
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#e74c3c');
+                createScreenFlash('rgba(231, 76, 60, 0.4)');
+
+                showScorePopup(item, `+${points} 🎯`, 'positive');
+                showScorePopup(item, `+${gold} 🪙`, 'gold', 30);
+                showComboIndicator('كنز ثمين! ✨');
+
+            } else if (type === 'rare-coin' || type === 'trophy') {
+                // العملة النادرة
+                gameState.score += points;
+                gameState.goldEarned += gold;
+                if (pearls > 0) gameState.pearlsEarned += pearls;
+                gameState.combo += 2;
+
+                // إضافة العناصر للملف الشخصي
+                if (type === 'rare-coin' && rareCoins > 0) {
+                    gameState.rareCoinsEarned += rareCoins;
+                    showScorePopup(item, `+${rareCoins} 🪙`, 'rare', 60);
+                } else if (type === 'trophy' && trophies > 0) {
+                    gameState.trophiesEarned += trophies;
+                    showScorePopup(item, `+${trophies} 🏆`, 'rare', 60);
+                }
+
+                playSound('catchSpecial');
+                setTimeout(() => playSound('combo'), 200);
+
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#f39c12');
+                createScreenFlash('rgba(243, 156, 18, 0.6)');
+
+                showScorePopup(item, `+${points} 🎯`, 'positive');
+                showScorePopup(item, `+${gold} 🪙`, 'gold', 30);
+                if (pearls > 0) showScorePopup(item, `+${pearls} 🦪`, 'pearl', 90);
+                showComboIndicator('عملة نادرة! 💰');
+
+            } else if (type === 'star' || type === 'super-star' || type === 'sparkle') {
+                // النجوم
+                gameState.score += points;
+                gameState.goldEarned += gold;
+                if (pearls > 0) gameState.pearlsEarned += pearls;
+                gameState.combo += 1;
+
+                // إضافة العناصر للملف الشخصي
+                if (type === 'star' && stars > 0) {
+                    gameState.starsEarned += stars;
+                    showScorePopup(item, `+${stars} ⭐`, 'star', 60);
+                } else if (type === 'super-star' && superStars > 0) {
+                    gameState.superStarsEarned += superStars;
+                    showScorePopup(item, `+${superStars} 🌟`, 'star', 60);
+                } else if (type === 'sparkle' && sparkles > 0) {
+                    gameState.sparklesEarned += sparkles;
+                    showScorePopup(item, `+${sparkles} ✨`, 'star', 60);
+                }
+
+                playSound('catchSpecial');
+
+                const rect = item.getBoundingClientRect();
+                createParticleExplosion(rect.left + rect.width/2, rect.top + rect.height/2, '#ffd700');
+                createScreenFlash('rgba(255, 215, 0, 0.5)');
+
+                showScorePopup(item, `+${points} 🎯`, 'positive');
+                showScorePopup(item, `+${gold} 🪙`, 'gold', 30);
+                if (pearls > 0) showScorePopup(item, `+${pearls} 🦪`, 'pearl', 90);
+                showComboIndicator('نجمة رائعة! ⭐');
+            }
+
+            gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
+            removeGameItem(item);
+            updateDisplay();
+            checkLevelUp();
+        }
+
+        // إعادة تعيين الكومبو
+        function resetCombo() {
+            if (gameState.combo > 0) {
+                gameState.combo = 0;
+                updateDisplay();
+            }
+        }
+
+        // تحسين إدارة العناصر - استخدام object pool لتقليل garbage collection
+        const itemPool = [];
+        const maxPoolSize = 20;
+
+        // إزالة عنصر مع تحسين الأداء
+        function removeGameItem(item) {
+            // إيقاف الحركة إذا كانت نشطة
+            activeItems.delete(item);
+
+            // إخفاء العنصر بدلاً من حذفه مباشرة
+            item.style.display = 'none';
+            item.style.top = '-70px';
+
+            // إضافة العنصر للمجموعة المعاد تدويرها إذا كان هناك مساحة
+            if (itemPool.length < maxPoolSize) {
+                // تنظيف خصائص العنصر
+                item.dataset.type = '';
+                item.dataset.points = '';
+                item.dataset.gold = '';
+                item.dataset.pearls = '';
+                item.className = 'game-item';
+                itemPool.push(item);
+            } else {
+                // حذف العنصر إذا كانت المجموعة ممتلئة
+                if (item.parentNode) {
+                    item.parentNode.removeChild(item);
+                }
+            }
+
+            // تحديث قائمة العناصر النشطة
+            gameState.gameItems = gameState.gameItems.filter(i => i !== item);
+        }
+
+        // إنشاء عنصر جديد مع إعادة الاستخدام
+        function createGameItemOptimized() {
+            let item;
+
+            // استخدام عنصر من المجموعة المعاد تدويرها إن وجد
+            if (itemPool.length > 0) {
+                item = itemPool.pop();
+                item.style.display = 'block';
+            } else {
+                // إنشاء عنصر جديد فقط إذا لم يكن هناك عناصر معاد تدويرها
+                item = document.createElement('div');
+                item.className = 'game-item';
+                gameContainer.appendChild(item);
+            }
+
+            return item;
+        }
+
+        // عرض مؤشر النقاط
+        function showScorePopup(element, text, type, offsetY = 0) {
+            const popup = document.createElement('div');
+            popup.className = `score-popup ${type}`;
+            popup.textContent = text;
+            
+            const rect = element.getBoundingClientRect();
+            popup.style.left = rect.left + rect.width/2 + 'px';
+            popup.style.top = rect.top - offsetY + 'px';
+            
+            gameContainer.appendChild(popup);
+            
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.parentNode.removeChild(popup);
+                }
+            }, 1500);
+        }
+
+        // عرض مؤشر الكومبو
+        function showComboIndicator(text) {
+            const indicator = document.createElement('div');
+            indicator.className = 'combo-indicator';
+            indicator.textContent = text;
+            
+            gameContainer.appendChild(indicator);
+            
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.parentNode.removeChild(indicator);
+                }
+            }, 1000);
+        }
+
+        // فحص المستوى التالي
+        function checkLevelUp() {
+            const newLevel = Math.floor(gameState.score / 500) + 1;
+            if (newLevel > gameState.level) {
+                gameState.level = newLevel;
+                gameState.gameSpeed = Math.max(1500, gameState.gameSpeed - 150);
+                gameState.spawnRate = Math.max(1000, gameState.spawnRate - 100);
+                
+                playSound('levelUp');
+                
+                // تأثيرات ترقية المستوى المذهلة
+                createScreenFlash('rgba(255, 215, 0, 0.9)');
+                shakeScreen();
+                
+                // انفجارات ذهبية متعددة
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                createParticleExplosion(centerX, centerY, '#ffd700');
+                setTimeout(() => createParticleExplosion(centerX - 100, centerY - 50, '#ff6b6b'), 200);
+                setTimeout(() => createParticleExplosion(centerX + 100, centerY - 50, '#4ecdc4'), 400);
+                
+                showComboIndicator(`🎉 المستوى ${newLevel}! 🎉`);
+                updateDisplay();
+            }
+        }
+
+        // انتهاء اللعبة مع تنظيف محسن للذاكرة
+        function endGame() {
+            gameState.isPlaying = false;
+
+            // تشغيل صوت نهاية اللعبة
+            playSound('gameEnd');
+
+            // إيقاف الموسيقى الخلفية
+            stopBackgroundMusic();
+
+            // إيقاف مؤثر المطر
+            stopAllRain();
+
+            // إيقاف المزامنة الدورية
+            if (gameState.syncInterval) {
+                clearInterval(gameState.syncInterval);
+                gameState.syncInterval = null;
+            }
+
+            // تنظيف جميع الحركات النشطة
+            activeItems.clear();
+
+            // تنظيف الشاشة
+            gameState.gameItems.forEach(item => removeGameItem(item));
+            gameState.gameItems = [];
+
+            // إعادة تعيين cache فحص التصادم
+            basketRect = null;
+            basketRectUpdateTime = 0;
+
+            // عرض شاشة النهاية
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalCombo').textContent = gameState.maxCombo;
+            document.getElementById('goldEarned').textContent = gameState.goldEarned;
+            document.getElementById('pearlsEarned').textContent = gameState.pearlsEarned;
+            gameOverScreen.style.display = 'block';
+
+            // حفظ النقطة والعملات
+            saveGameResults();
+        }
+
+        // إعادة بدء اللعبة
+        function restartGame() {
+            // إيقاف الموسيقى الحالية أولاً
+            stopBackgroundMusic();
+            gameOverScreen.style.display = 'none';
+            startGame();
+        }
+
+        // العودة للقائمة (من شاشة انتهاء اللعبة)
+        function goHome() {
+            window.close();
+        }
+
+        // العودة للصفحة الرئيسية (أثناء اللعب) - مبسطة وموثوقة
+        function goToMainPage() {
+            console.log('🏠 تم الضغط على زر العودة');
+
+            // إيقاف اللعبة فوراً
+            gameState.isPlaying = false;
+
+            // تنظيف سريع
+            try {
+                if (gameState.syncInterval) {
+                    clearInterval(gameState.syncInterval);
+                }
+                if (activeItems) {
+                    activeItems.clear();
+                }
+            } catch (e) {
+                console.log('تنظيف:', e);
+            }
+
+            // العودة للصفحة الرئيسية مباشرة
+            console.log('🔄 الانتقال للصفحة الرئيسية...');
+            window.location.href = '/';
+        }
+
+        // دالة بديلة للعودة (في حالة فشل الأولى)
+        function goBackHome() {
+            console.log('🏠 دالة العودة البديلة');
+            gameState.isPlaying = false;
+            window.location.replace('/');
+        }
+
+        // دالة كتم/إلغاء كتم الصوت
+        function toggleMute() {
+            gameState.isMuted = !gameState.isMuted;
+            const muteBtn = document.getElementById('muteBtn');
+
+            if (gameState.isMuted) {
+                muteBtn.textContent = '🔇';
+                muteBtn.classList.add('muted');
+                muteBtn.title = 'إلغاء كتم الصوت';
+
+                // إيقاف الموسيقى الخلفية
+                stopBackgroundMusic();
+
+                console.log('🔇 تم كتم الصوت');
+            } else {
+                muteBtn.textContent = '🔊';
+                muteBtn.classList.remove('muted');
+                muteBtn.title = 'كتم الصوت';
+
+                // تشغيل الموسيقى الخلفية إذا كانت اللعبة نشطة
+                if (gameState.isPlaying) {
+                    startBackgroundMusic();
+                }
+
+                console.log('🔊 تم إلغاء كتم الصوت');
+            }
+        }
+
+        // مؤثر المطر
+        let rainInterval = null;
+        let rainTimeout = null;
+
+        function createRaindrop() {
+            const raindrop = document.createElement('div');
+            raindrop.className = 'raindrop';
+
+            // موضع عشوائي
+            raindrop.style.left = Math.random() * 100 + '%';
+
+            // حجم وسرعة عشوائية
+            const size = Math.random() * 3 + 1;
+            const duration = Math.random() * 1 + 0.5;
+
+            raindrop.style.height = size * 10 + 'px';
+            raindrop.style.animationDuration = duration + 's';
+
+            return raindrop;
+        }
+
+        function startRain() {
+            const rainContainer = document.getElementById('rainContainer');
+            if (!rainContainer) return;
+
+            console.log('🌧️ بدء المطر');
+            rainContainer.classList.add('active');
+
+            // إنشاء قطرات المطر
+            rainInterval = setInterval(() => {
+                if (gameState.isPlaying) {
+                    const raindrop = createRaindrop();
+                    rainContainer.appendChild(raindrop);
+
+                    // إزالة القطرة بعد انتهاء الحركة
+                    setTimeout(() => {
+                        if (raindrop.parentNode) {
+                            raindrop.parentNode.removeChild(raindrop);
+                        }
+                    }, 2000);
+                }
+            }, 50);
+
+            // إيقاف المطر بعد 10-15 ثانية
+            const rainDuration = 10000 + Math.random() * 5000;
+            rainTimeout = setTimeout(stopRain, rainDuration);
+        }
+
+        function stopRain() {
+            const rainContainer = document.getElementById('rainContainer');
+            if (!rainContainer) return;
+
+            console.log('🌤️ توقف المطر');
+            rainContainer.classList.remove('active');
+
+            if (rainInterval) {
+                clearInterval(rainInterval);
+                rainInterval = null;
+            }
+
+            if (rainTimeout) {
+                clearTimeout(rainTimeout);
+                rainTimeout = null;
+            }
+
+            // تنظيف قطرات المطر المتبقية
+            setTimeout(() => {
+                rainContainer.innerHTML = '';
+            }, 2000);
+
+            // جدولة المطر التالي (كل 30-60 ثانية)
+            if (gameState.isPlaying) {
+                const nextRainDelay = 30000 + Math.random() * 30000;
+                rainTimeout = setTimeout(startRain, nextRainDelay);
+            }
+        }
+
+        function initializeRain() {
+            // بدء أول مطر بعد 20-40 ثانية من بدء اللعبة
+            if (gameState.isPlaying) {
+                const initialDelay = 20000 + Math.random() * 20000;
+                rainTimeout = setTimeout(startRain, initialDelay);
+            }
+        }
+
+        function stopAllRain() {
+            if (rainInterval) {
+                clearInterval(rainInterval);
+                rainInterval = null;
+            }
+            if (rainTimeout) {
+                clearTimeout(rainTimeout);
+                rainTimeout = null;
+            }
+
+            const rainContainer = document.getElementById('rainContainer');
+            if (rainContainer) {
+                rainContainer.classList.remove('active');
+                rainContainer.innerHTML = '';
+            }
+        }
+
+        // كشف الجهاز المحمول
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
+                   window.innerWidth <= 768;
+        }
+
+        // تعيين موضع السلة الابتدائي
+        function initializeBasketPosition() {
+            const basketWidth = window.innerWidth <= 768 ? 100 : 110;
+            const centerX = window.innerWidth / 2;
+            const initialLeft = centerX - basketWidth / 2;
+
+            basket.style.left = initialLeft + 'px';
+            basket.style.transform = 'translateX(0)';
+        }
+
+        // تحريك السلة مع تحسين للمس والحدود
+        function moveBasket(clientX) {
+            if (!gameState.isPlaying) return;
+
+            // تحديد حجم السلة بناءً على الجهاز
+            const basketWidth = window.innerWidth <= 768 ? 100 : 110;
+
+            // تحديد مساحة اللعب الكاملة
+            const gameAreaLeft = 0;
+            const gameAreaRight = window.innerWidth;
+
+            // تقييد حركة السلة داخل مساحة اللعب الكاملة
+            const minLeft = gameAreaLeft;
+            const maxLeft = gameAreaRight - basketWidth;
+
+            // حساب الموقع الجديد مع تحسين الاستجابة
+            let newLeft = clientX - basketWidth / 2;
+            newLeft = Math.max(minLeft, Math.min(maxLeft, newLeft));
+
+            // تطبيق الموقع الجديد
+            basket.style.left = newLeft + 'px';
+            basket.style.transform = 'translateX(0)'; // إزالة التوسيط الافتراضي
+        }
+
+        // متغير لتتبع حالة اللمس
+        let isTouch = false;
+        let lastTouchTime = 0;
+
+        // تحريك السلة مع الفأرة (للكمبيوتر)
+        document.addEventListener('mousemove', (e) => {
+            if (gameState.isPlaying && !isTouch) {
+                moveBasket(e.clientX);
+            }
+        });
+
+        // تحريك السلة مع اللمس المحسن
+        document.addEventListener('touchstart', (e) => {
+            if (gameState.isPlaying) {
+                e.preventDefault();
+                isTouch = true;
+                lastTouchTime = Date.now();
+
+                if (e.touches.length > 0) {
+                    moveBasket(e.touches[0].clientX);
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (gameState.isPlaying) {
+                e.preventDefault();
+                isTouch = true;
+                lastTouchTime = Date.now();
+
+                if (e.touches.length > 0) {
+                    moveBasket(e.touches[0].clientX);
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (gameState.isPlaying) {
+                e.preventDefault();
+                // إعادة تعيين حالة اللمس بعد فترة قصيرة
+                setTimeout(() => {
+                    if (Date.now() - lastTouchTime > 100) {
+                        isTouch = false;
+                    }
+                }, 150);
+            }
+        }, { passive: false });
+
+        // منع التمرير والتكبير
+        document.addEventListener('touchcancel', (e) => {
+            if (gameState.isPlaying) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // منع السحب والإفلات
+        document.addEventListener('dragstart', (e) => {
+            if (gameState.isPlaying) {
+                e.preventDefault();
+            }
+        });
+
+        // منع القائمة السياقية
+        document.addEventListener('contextmenu', (e) => {
+            if (gameState.isPlaying) {
+                e.preventDefault();
+            }
+        });
+
+        // حفظ نتائج اللعبة والعملات مع مزامنة محسنة
+        async function saveGameResults() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('لا يوجد رمز مصادقة - سيتم حفظ النتائج محلياً فقط');
+                return;
+            }
+
+            try {
+                // إرسال النتائج مع تفاصيل أكثر
+                const gameData = {
+                    gameName: 'قطف الفواكه المطورة',
+                    score: gameState.score,
+                    level: gameState.level,
+                    goldEarned: Math.max(0, gameState.goldEarned), // التأكد من عدم وجود قيم سالبة
+                    pearlsEarned: Math.max(0, gameState.pearlsEarned),
+                    // العناصر الجديدة المكتسبة
+                    diamondsEarned: Math.max(0, gameState.diamondsEarned),
+                    crystalsEarned: Math.max(0, gameState.crystalsEarned),
+                    rareCoinsEarned: Math.max(0, gameState.rareCoinsEarned),
+                    trophiesEarned: Math.max(0, gameState.trophiesEarned),
+                    starsEarned: Math.max(0, gameState.starsEarned),
+                    superStarsEarned: Math.max(0, gameState.superStarsEarned),
+                    sparklesEarned: Math.max(0, gameState.sparklesEarned),
+                    maxCombo: gameState.maxCombo,
+                    gameTime: Date.now(),
+                    finalGoldCoins: gameState.goldCoins + gameState.goldEarned,
+                    finalPearls: gameState.pearls + gameState.pearlsEarned
+                };
+
+                console.log('إرسال نتائج اللعبة:', gameData);
+
+                const response = await fetch('/api/game/score', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(gameData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('استجابة الخادم:', data);
+
+                    // تحديث الرصيد من استجابة الخادم
+                    if (data.goldCoins !== undefined) {
+                        gameState.goldCoins = data.goldCoins;
+                    }
+                    if (data.pearls !== undefined) {
+                        gameState.pearls = data.pearls;
+                    }
+
+                    updateDisplay();
+
+                    // تحديث عرض الرصيد في الهيدر
+                    if (window.playerHeader && data.goldCoins !== undefined) {
+                        window.playerHeader.updateBalance(data.goldCoins);
+                    }
+
+                    console.log('✅ تم حفظ النتائج بنجاح');
+                } else {
+                    const errorText = await response.text();
+                    console.error('خطأ في الاستجابة:', response.status, errorText);
+                }
+            } catch (error) {
+                console.error('❌ خطأ في حفظ النتائج:', error);
+                // في حالة الخطأ، نحفظ النتائج محلياً
+                gameState.goldCoins += gameState.goldEarned;
+                gameState.pearls += gameState.pearlsEarned;
+                updateDisplay();
+            }
+        }
+
+        // مزامنة فورية للعملات أثناء اللعب
+        async function syncCurrencyRealTime() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/user/currency', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        goldCoins: gameState.goldCoins + gameState.goldEarned,
+                        pearls: gameState.pearls + gameState.pearlsEarned
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('تم تحديث العملات في الوقت الفعلي');
+                }
+            } catch (error) {
+                console.log('خطأ في المزامنة الفورية:', error);
+            }
+        }
+
+        // تهيئة اللعبة
+        function initializeGame() {
+            // تحديث النص حسب نوع الجهاز
+            if (isMobileDevice()) {
+                document.getElementById('controlText').textContent = 'المس الشاشة وحرك إصبعك لتحريك السلة';
+            }
+            
+            updateDisplay();
+            updateCurrencyFromServer();
+        }
+
+        // بدء التهيئة عند تحميل الصفحة
+        initializeGame();
+
+        // التأكد من عمل زر العودة
+        document.addEventListener('DOMContentLoaded', function() {
+            const homeBtn = document.querySelector('.home-btn');
+            if (homeBtn) {
+                console.log('✅ تم العثور على زر العودة');
+
+                // إضافة event listener إضافي
+                homeBtn.addEventListener('click', function(e) {
+                    console.log('🏠 تم الضغط على زر العودة (event listener)');
+                    e.preventDefault();
+                    goToMainPage();
+                });
+            } else {
+                console.log('❌ لم يتم العثور على زر العودة');
+            }
+        });
+
+        // تهيئة النظام الاقتصادي
+        async function initializeEconomy() {
+            try {
+                if (window.gameEconomy) {
+                    gameState.economySession = await window.gameEconomy.initializeGameSession('fruit-catching', gameState.betAmount);
+                    console.log('✅ تم تهيئة النظام الاقتصادي لقطف الفواكه');
+                }
+            } catch (error) {
+                console.error('❌ خطأ في تهيئة النظام الاقتصادي:', error);
+            }
+        }
+
+        // تهيئة النظام الاقتصادي عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', async function() {
+            // تهيئة نظام الصوت
+            initAudio();
+
+            // تهيئة هيدر اللاعب
+            await window.playerHeader.init();
+            const headerContainer = document.getElementById('player-header-container');
+            if (headerContainer) {
+                window.playerHeader.insertHeader(headerContainer);
+            }
+
+            // استعادة إعدادات الصوت
+            restoreSoundSettings();
+
+            if (window.gameEconomy) {
+                await initializeEconomy();
+            }
+        });
+    </script>
+</body>
+</html>

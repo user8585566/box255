@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ألغاز العقل</title>
+    <script src="js/translations.js"></script>
+    <script src="js/game-economy.js"></script>
+    <script src="js/player-header.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2332 25%, #2d3748 50%, #1a365d 75%, #2c5282 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(25px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
+        }
+
+        .game-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .score-display {
+            font-size: 1.2em;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .puzzle-area {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%);
+            border-radius: 15px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .puzzle-question {
+            font-size: 1.3em;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            text-align: center;
+            color: #fff;
+        }
+
+        .puzzle-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .option-btn {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%);
+            border-color: rgba(255, 215, 0, 0.6);
+            transform: translateY(-3px);
+        }
+
+        .option-btn.correct {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-color: #10b981;
+        }
+
+        .option-btn.wrong {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-color: #ef4444;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffc107 100%);
+            border: 3px solid rgba(255, 215, 0, 0.9);
+            border-radius: 15px;
+            padding: 12px 24px;
+            color: #1a202c;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        .result-message {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .result-message.correct {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: #10b981;
+        }
+
+        .result-message.wrong {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+
+        /* تصميم معلومات اللغز */
+        .puzzle-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .category {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .difficulty {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .points {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #1a202c;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .question-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                margin: 2px;
+                padding: 8px;
+                max-width: 100vw;
+                box-sizing: border-box;
+            }
+
+            .header {
+                margin-bottom: 5px;
+                padding: 4px 6px;
+                flex-wrap: wrap;
+            }
+
+            .game-title {
+                font-size: 0.9em;
+                order: 1;
+                flex: 1;
+                text-align: center;
+            }
+
+            .back-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 1em;
+                order: 0;
+            }
+
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                margin: 5px 0;
+            }
+
+            .stat-item {
+                padding: 4px 6px;
+                border-radius: 6px;
+            }
+
+            .stat-value {
+                font-size: 1em;
+            }
+
+            .stat-label {
+                font-size: 0.7em;
+            }
+
+            .puzzle-info {
+                flex-direction: column;
+                gap: 4px;
+                text-align: center;
+                padding: 6px 8px;
+                margin-bottom: 8px;
+            }
+
+            .puzzle-info > span {
+                font-size: 0.7em;
+            }
+
+            .question-text {
+                font-size: 0.9em;
+                line-height: 1.4;
+            }
+
+            .puzzle-options {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                max-width: 100%;
+            }
+
+            .option-btn {
+                padding: 10px;
+                font-size: 0.85em;
+                border-radius: 8px;
+            }
+
+            .controls {
+                gap: 4px;
+                margin: 8px 0;
+                flex-wrap: wrap;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 0.75em;
+                border-radius: 8px;
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .result-message {
+                padding: 8px;
+                font-size: 0.8em;
+                margin: 8px 0;
+                border-radius: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .puzzle-options {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .option-btn {
+                padding: 8px;
+                font-size: 0.8em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .control-btn {
+                width: 100%;
+                max-width: 200px;
+                margin: 2px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- معلومات اللاعب -->
+        <div id="player-header-container"></div>
+
+        <div class="header">
+            <button class="back-btn" onclick="goBack()" title="العودة">
+                ←
+            </button>
+            <h1 class="game-title">🧠 ألغاز العقل</h1>
+            <div class="score-display">
+                النقاط: <span id="score">0</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="correct">0</div>
+                <div class="stat-label">صحيح</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="wrong">0</div>
+                <div class="stat-label">خطأ</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="level">1</div>
+                <div class="stat-label">المستوى</div>
+            </div>
+        </div>
+
+        <div class="puzzle-area">
+            <div class="puzzle-question" id="puzzleQuestion">
+                اضغط على "لغز جديد" لبدء اللعب! 🎯
+            </div>
+            <div class="puzzle-options" id="puzzleOptions">
+                <!-- الخيارات ستظهر هنا -->
+            </div>
+        </div>
+
+        <div class="result-message" id="resultMessage">
+            <!-- رسالة النتيجة -->
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); newPuzzle()">🧩 لغز جديد</button>
+            <button class="control-btn" onclick="enableAudio(); playSound('click'); resetGame()">🔄 إعادة تعيين</button>
+            <button class="control-btn" onclick="enableAudio(); playSound('hint'); showHint()">💡 تلميح</button>
+            <button class="control-btn" onclick="toggleSound()" id="sound-btn">🔊 الصوت</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            score: 0,
+            correct: 0,
+            wrong: 0,
+            level: 1,
+            currentPuzzle: null,
+            economySession: null,
+            betAmount: 15, // تكلفة كل لغز
+            soundEnabled: true // تفعيل الأصوات
+        };
+
+        // نظام الأصوات باستخدام Web Audio API
+        let audioContext;
+        let audioInitialized = false;
+
+        // تهيئة نظام الصوت
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('🔊 تم تهيئة نظام الصوت - ألغاز العقل');
+            } catch (error) {
+                console.log('🔇 Web Audio API غير مدعوم');
+                gameState.soundEnabled = false;
+            }
+        }
+
+        // تفعيل AudioContext عند أول تفاعل
+        function enableAudio() {
+            if (!audioInitialized && audioContext) {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        audioInitialized = true;
+                        console.log('🔊 تم تفعيل نظام الصوت - ألغاز العقل');
+                        setTimeout(() => playSound('click'), 100);
+                    });
+                } else {
+                    audioInitialized = true;
+                    console.log('🔊 نظام الصوت جاهز - ألغاز العقل');
+                }
+            }
+        }
+
+        // دالة توليد الأصوات
+        function playSound(type) {
+            if (!gameState.soundEnabled || !audioContext) return;
+
+            // تفعيل الصوت إذا لم يكن مفعلاً
+            if (!audioInitialized) {
+                enableAudio();
+                return;
+            }
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // تحديد نوع الصوت حسب الحدث
+                switch(type) {
+                    case 'click':
+                        // صوت نقرة عادية
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                        oscillator.type = 'sine';
+                        break;
+
+                    case 'correct':
+                        // صوت إجابة صحيحة
+                        oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(784, audioContext.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        oscillator.type = 'triangle';
+                        break;
+
+                    case 'wrong':
+                        // صوت إجابة خاطئة
+                        oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(110, audioContext.currentTime + 0.4);
+                        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                        oscillator.type = 'sawtooth';
+                        break;
+
+                    case 'levelUp':
+                        // صوت ارتقاء مستوى
+                        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.5);
+                        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                        oscillator.type = 'square';
+                        break;
+
+                    case 'hint':
+                        // صوت التلميح
+                        oscillator.frequency.setValueAtTime(659, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(523, audioContext.currentTime + 0.2);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        oscillator.type = 'sine';
+                        break;
+
+                    default:
+                        return;
+                }
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+
+            } catch (error) {
+                console.log('🔇 خطأ في تشغيل الصوت');
+            }
+        }
+
+        // دالة تبديل الصوت
+        function toggleSound() {
+            enableAudio();
+
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const soundBtn = document.getElementById('sound-btn');
+
+            if (gameState.soundEnabled) {
+                soundBtn.textContent = '🔊 الصوت';
+                soundBtn.style.opacity = '1';
+                setTimeout(() => playSound('click'), 100);
+            } else {
+                soundBtn.textContent = '🔇 صامت';
+                soundBtn.style.opacity = '0.6';
+            }
+
+            localStorage.setItem('mind-puzzles-sound-enabled', gameState.soundEnabled);
+        }
+
+        // استعادة إعدادات الصوت
+        function restoreSoundSettings() {
+            const savedSetting = localStorage.getItem('mind-puzzles-sound-enabled');
+            if (savedSetting !== null) {
+                gameState.soundEnabled = savedSetting === 'true';
+            }
+
+            const soundBtn = document.getElementById('sound-btn');
+            if (gameState.soundEnabled) {
+                soundBtn.textContent = '🔊 الصوت';
+                soundBtn.style.opacity = '1';
+            } else {
+                soundBtn.textContent = '🔇 صامت';
+                soundBtn.style.opacity = '0.6';
+            }
+        }
+
+        const puzzles = [
+            {
+                question: "ما هو الرقم التالي في هذه السلسلة؟\n2, 4, 8, 16, ?",
+                options: ["24", "32", "20", "30"],
+                correct: 1,
+                hint: "كل رقم هو ضعف الرقم السابق",
+                difficulty: 1,
+                category: "رياضيات",
+                points: 10
+            },
+            {
+                question: "إذا كان اليوم الثلاثاء، فما هو اليوم بعد 100 يوم؟",
+                options: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء"],
+                correct: 2,
+                hint: "100 ÷ 7 = 14 أسبوع و 2 يوم إضافي",
+                difficulty: 2,
+                category: "حساب الوقت",
+                points: 15
+            },
+            {
+                question: "ما هو العدد الذي إذا ضربته في نفسه وأضفت إليه 5 يصبح 30؟",
+                options: ["5", "6", "4", "7"],
+                correct: 0,
+                hint: "x² + 5 = 30، إذن x² = 25",
+                difficulty: 2,
+                category: "جبر",
+                points: 15
+            },
+            {
+                question: "كم مثلث يمكنك أن تجد في هذا الشكل؟ ⬟",
+                options: ["3", "6", "9", "12"],
+                correct: 1,
+                hint: "لا تنس المثلثات الصغيرة والكبيرة",
+                difficulty: 2,
+                category: "هندسة",
+                points: 15
+            },
+            {
+                question: "إذا كان 5 + 5 = 10، و 10 + 10 = 40، فكم يساوي 15 + 15؟",
+                options: ["30", "60", "90", "120"],
+                correct: 2,
+                hint: "انظر للنمط: 5×2=10، 10×4=40",
+                difficulty: 3,
+                category: "أنماط",
+                points: 20
+            },
+            // ألغاز منطقية متقدمة
+            {
+                question: "ما الشيء الذي يزيد كلما أخذت منه؟",
+                options: ["الحفرة", "المعرفة", "الوقت", "المال"],
+                correct: 0,
+                hint: "فكر في شيء يصبح أكبر عندما تزيل منه",
+                difficulty: 2,
+                category: "ألغاز لفظية",
+                points: 15
+            },
+            {
+                question: "لديك 12 كرة، إحداها أثقل من الباقي. كم مرة تحتاج لاستخدام الميزان لتجدها؟",
+                options: ["2", "3", "4", "5"],
+                correct: 1,
+                hint: "قسم الكرات إلى 3 مجموعات متساوية",
+                difficulty: 4,
+                category: "منطق متقدم",
+                points: 25
+            },
+            {
+                question: "في سباق، تجاوزت العداء في المركز الثاني. في أي مركز أصبحت؟",
+                options: ["الأول", "الثاني", "الثالث", "الرابع"],
+                correct: 1,
+                hint: "إذا تجاوزت الثاني، فأنت تأخذ مكانه",
+                difficulty: 3,
+                category: "منطق",
+                points: 20
+            },
+            {
+                question: "رجل يعيش في الطابق العشرين. كل يوم ينزل بالمصعد للطابق الأرضي، لكن عند العودة يصعد للطابق العاشر فقط ثم يمشي. لماذا؟",
+                options: ["المصعد معطل", "قصير القامة", "يحب الرياضة", "يخاف المرتفعات"],
+                correct: 1,
+                hint: "فكر في قدرته على الوصول لأزرار المصعد",
+                difficulty: 3,
+                category: "ألغاز لفظية",
+                points: 20
+            },
+            {
+                question: "ما هو الرقم الذي إذا ضربته في 4 وطرحت منه 6 وقسمته على 2 يصبح 9؟",
+                options: ["6", "7", "8", "9"],
+                correct: 0,
+                hint: "اعمل بالعكس: 9×2+6÷4",
+                difficulty: 4,
+                category: "جبر",
+                points: 25
+            },
+            {
+                question: "لديك 3 صناديق: أحدها يحتوي على تفاحتين، والثاني على برتقالتين، والثالث على تفاحة وبرتقالة. جميع الملصقات خاطئة. كم فاكهة تحتاج لسحبها لتعرف محتوى كل صندوق؟",
+                options: ["1", "2", "3", "4"],
+                correct: 0,
+                hint: "ابدأ بالصندوق المكتوب عليه 'مختلط'",
+                difficulty: 5,
+                category: "منطق متقدم",
+                points: 30
+            },
+            {
+                question: "إذا كان 1=5، 2=25، 3=325، 4=4325، فما هو 5=؟",
+                options: ["54325", "5", "55325", "543255"],
+                correct: 1,
+                hint: "انظر للنمط بعناية... أحياناً الجواب أبسط مما تتوقع",
+                difficulty: 5,
+                category: "أنماط متقدمة",
+                points: 30
+            },
+            {
+                question: "ما هو عدد الأضلاع في الشكل الذي مجموع زواياه الداخلية 1080°؟",
+                options: ["6", "7", "8", "9"],
+                correct: 2,
+                hint: "استخدم القانون: (n-2) × 180°",
+                difficulty: 3,
+                category: "هندسة",
+                points: 20
+            },
+            {
+                question: "إذا كان 3x + 7 = 22، فما قيمة x؟",
+                options: ["5", "6", "4", "7"],
+                correct: 0,
+                hint: "اطرح 7 من الطرفين ثم اقسم على 3",
+                difficulty: 2,
+                category: "جبر",
+                points: 15
+            }
+        ];
+
+        function goBack() {
+            window.close();
+            window.history.back();
+        }
+
+        function goToMainPage() {
+            window.location.href = '/';
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('correct').textContent = gameState.correct;
+            document.getElementById('wrong').textContent = gameState.wrong;
+            document.getElementById('level').textContent = gameState.level;
+        }
+
+        function newPuzzle() {
+            const randomIndex = Math.floor(Math.random() * puzzles.length);
+            gameState.currentPuzzle = puzzles[randomIndex];
+
+            // عرض معلومات اللغز مع التصميم المحسن
+            const questionElement = document.getElementById('puzzleQuestion');
+            questionElement.innerHTML = `
+                <div class="puzzle-info">
+                    <span class="category">📂 ${gameState.currentPuzzle.category || 'عام'}</span>
+                    <span class="difficulty">⭐ ${getDifficultyStars(gameState.currentPuzzle.difficulty || 1)}</span>
+                    <span class="points">💎 ${gameState.currentPuzzle.points || 10} نقطة</span>
+                </div>
+                <div class="question-text">${gameState.currentPuzzle.question}</div>
+            `;
+
+            const optionsContainer = document.getElementById('puzzleOptions');
+            optionsContainer.innerHTML = '';
+
+            gameState.currentPuzzle.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => checkAnswer(index);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('resultMessage').style.display = 'none';
+        }
+
+        function getDifficultyStars(difficulty) {
+            return '⭐'.repeat(difficulty) + '☆'.repeat(5 - difficulty);
+        }
+
+        async function checkAnswer(selectedIndex) {
+            const resultMessage = document.getElementById('resultMessage');
+            const options = document.querySelectorAll('.option-btn');
+
+            // تعطيل جميع الأزرار
+            options.forEach(btn => btn.style.pointerEvents = 'none');
+
+            // التحقق من النظام الاقتصادي بصمت
+            let economyAvailable = false;
+            try {
+                if (window.gameEconomy && typeof window.gameEconomy.canPlay === 'function') {
+                    const canPlayCheck = window.gameEconomy.canPlay(gameState.betAmount);
+                    if (!canPlayCheck.canPlay) {
+                        alert(canPlayCheck.reason);
+                        return;
+                    }
+                    economyAvailable = true;
+                } else {
+                    // تشغيل اللعبة في وضع التدريب
+                    console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                    economyAvailable = false;
+                }
+            } catch (error) {
+                // في حالة الخطأ، تشغيل اللعبة بدون نظام اقتصادي
+                console.log('🎮 تشغيل اللعبة في وضع التدريب');
+                economyAvailable = false;
+            }
+
+            if (selectedIndex === gameState.currentPuzzle.correct) {
+                // إجابة صحيحة
+                options[selectedIndex].classList.add('correct');
+                const pointsEarned = gameState.level * 10;
+                gameState.score += pointsEarned;
+                gameState.correct++;
+                gameState.level++;
+
+                // حساب النتائج باستخدام النظام الاقتصادي
+                try {
+                    const economicResult = window.gameEconomy.calculateGameResult(
+                        pointsEarned,
+                        'mind-puzzles',
+                        gameState.betAmount
+                    );
+
+                    const gameResult = {
+                        isWin: economicResult.isWin,
+                        winAmount: economicResult.winAmount,
+                        lossAmount: gameState.betAmount,
+                        playerScore: pointsEarned,
+                        skillFactor: economicResult.skillFactor,
+                        economicFactor: economicResult.economicFactor,
+                        probability: economicResult.probability
+                    };
+
+                    const balanceUpdate = await window.gameEconomy.updatePlayerBalance(gameResult);
+                    if (balanceUpdate.success) {
+                        console.log(`💰 تم تحديث الرصيد: ${balanceUpdate.newBalance} (تغيير: ${balanceUpdate.change})`);
+                        // تحديث عرض الرصيد في الهيدر
+                        if (window.playerHeader) {
+                            window.playerHeader.updateBalance(balanceUpdate.newBalance);
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ خطأ في تحديث الرصيد:', error);
+                }
+
+                // تشغيل صوت الإجابة الصحيحة
+                playSound('correct');
+
+                // رفع المستوى كل 3 إجابات صحيحة
+                if (gameState.correct % 3 === 0) {
+                    playSound('levelUp');
+                    resultMessage.innerHTML = `🎉 إجابة صحيحة! +${pointsEarned} نقطة<br>🆙 مستوى جديد: ${gameState.level}`;
+                } else {
+                    resultMessage.textContent = `🎉 إجابة صحيحة! +${pointsEarned} نقطة`;
+                }
+                resultMessage.className = 'result-message correct';
+            } else {
+                // إجابة خاطئة
+                options[selectedIndex].classList.add('wrong');
+                options[gameState.currentPuzzle.correct].classList.add('correct');
+                gameState.wrong++;
+
+                // خصم تكلفة اللعب عند الخطأ
+                try {
+                    const gameResult = {
+                        isWin: false,
+                        winAmount: 0,
+                        lossAmount: gameState.betAmount,
+                        playerScore: 0,
+                        skillFactor: 0,
+                        economicFactor: 0.5,
+                        probability: 0
+                    };
+
+                    const balanceUpdate = await window.gameEconomy.updatePlayerBalance(gameResult);
+                    if (balanceUpdate.success) {
+                        console.log(`💰 تم خصم الرصيد: ${balanceUpdate.newBalance} (تغيير: ${balanceUpdate.change})`);
+                        // تحديث عرض الرصيد في الهيدر
+                        if (window.playerHeader) {
+                            window.playerHeader.updateBalance(balanceUpdate.newBalance);
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ خطأ في تحديث الرصيد:', error);
+                }
+
+                // تشغيل صوت الإجابة الخاطئة
+                playSound('wrong');
+
+                resultMessage.innerHTML = `❌ إجابة خاطئة!<br>الإجابة الصحيحة: ${gameState.currentPuzzle.options[gameState.currentPuzzle.correct]}`;
+                resultMessage.className = 'result-message wrong';
+            }
+
+            resultMessage.style.display = 'block';
+            updateDisplay();
+
+            // إعادة تفعيل الأزرار بعد 3 ثوان
+            setTimeout(() => {
+                options.forEach(btn => btn.style.pointerEvents = 'auto');
+            }, 3000);
+        }
+
+        function showHint() {
+            if (gameState.currentPuzzle && gameState.currentPuzzle.hint) {
+                alert(`💡 تلميح: ${gameState.currentPuzzle.hint}`);
+            } else {
+                alert('لا يوجد تلميح متاح. اختر لغز جديد أولاً!');
+            }
+        }
+
+        function resetGame() {
+            gameState = {
+                score: 0,
+                correct: 0,
+                wrong: 0,
+                level: 1,
+                currentPuzzle: null
+            };
+            
+            document.getElementById('puzzleQuestion').textContent = 'اضغط على "لغز جديد" لبدء اللعب! 🎯';
+            document.getElementById('puzzleOptions').innerHTML = '';
+            document.getElementById('resultMessage').style.display = 'none';
+            updateDisplay();
+        }
+
+        // تهيئة النظام الاقتصادي
+        async function initializeEconomy() {
+            try {
+                if (window.gameEconomy) {
+                    gameState.economySession = await window.gameEconomy.initializeGameSession('mind-puzzles', gameState.betAmount);
+                    console.log('✅ تم تهيئة النظام الاقتصادي لألغاز العقل');
+                }
+            } catch (error) {
+                console.error('❌ خطأ في تهيئة النظام الاقتصادي:', error);
+            }
+        }
+
+        // تطبيق الترجمات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', async function() {
+            // تهيئة نظام الصوت
+            initAudio();
+
+            // تهيئة هيدر اللاعب
+            if (window.playerHeader) {
+                await window.playerHeader.init();
+                const headerContainer = document.getElementById('player-header-container');
+                if (headerContainer) {
+                    window.playerHeader.insertHeader(headerContainer);
+                }
+            }
+
+            // استعادة إعدادات الصوت
+            restoreSoundSettings();
+
+            if (window.languageManager) {
+                window.languageManager.translatePage();
+            }
+            await initializeEconomy();
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
