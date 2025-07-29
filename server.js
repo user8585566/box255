@@ -444,9 +444,6 @@ voiceRoomSchema.pre('save', function(next) {
   next();
 });
 
-// تعريف موديل VoiceRoom مع التحقق من عدم إعادة التعريف
-const VoiceRoom = mongoose.models.VoiceRoom || mongoose.model('VoiceRoom', voiceRoomSchema);
-
 // وظيفة إنشاء إشعار
 const createNotification = async (userId, type, title, message, data = {}, fromUserId = null, userPlayerId = null) => {
   try {
