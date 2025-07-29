@@ -20,11 +20,6 @@ export class WebRTCVoiceService {
   private isMuted = false;
   private roomId: string | null = null;
   private userId: string | null = null;
-
-  // منع التكرار
-  private processingOffers: Set<string> = new Set();
-  private connectionAttempts: Map<string, number> = new Map();
-  private connectionMonitorInterval: NodeJS.Timeout | null = null;
   
   // Voice Activity Detection
   private audioContext: AudioContext | null = null;
@@ -72,32 +67,45 @@ export class WebRTCVoiceService {
   // Join voice room
   async joinRoom(roomId: string, userId: string): Promise<void> {
     try {
+      console.log('🎤 Joining voice room:', roomId, 'as user:', userId);
+      
       this.roomId = roomId;
       this.userId = userId;
-
-      // Get user media with simple, reliable settings
+      
+      // Get user media with enhanced echo cancellation
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1,
+          // Enhanced echo cancellation settings
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false
         },
         video: false
       });
       
+      console.log('✅ Got local audio stream');
+      
       // Start voice activity detection
       this.startVoiceActivityDetection();
-
+      
       // Notify server about joining
+      console.log('📤 Sending join_voice_room message to server');
       this.wsService.send({
         type: 'join_voice_room',
         data: { roomId, userId }
       });
-
+      console.log('✅ join_voice_room message sent');
+      
       this.isJoined = true;
-
-      // بدء فحص دوري للاتصالات
-      this.startConnectionMonitoring();
+      console.log('✅ Joined voice room successfully');
       
     } catch (error) {
       console.error('❌ Error joining voice room:', error);
@@ -109,21 +117,23 @@ export class WebRTCVoiceService {
   // Leave voice room
   async leaveRoom(): Promise<void> {
     try {
+      console.log('🔄 Leaving voice room...');
+      
       // Close all peer connections
       this.peerConnections.forEach((pc, userId) => {
         pc.close();
       });
       this.peerConnections.clear();
-
+      
       // Stop local stream
       if (this.localStream) {
         this.localStream.getTracks().forEach(track => track.stop());
         this.localStream = null;
       }
-
+      
       // Stop voice monitoring
       this.stopVoiceActivityDetection();
-
+      
       // Notify server
       if (this.roomId && this.userId) {
         this.wsService.send({
@@ -131,16 +141,11 @@ export class WebRTCVoiceService {
           data: { roomId: this.roomId, userId: this.userId }
         });
       }
-
+      
       this.isJoined = false;
       this.remoteUsers.clear();
-
-      // تنظيف متغيرات منع التكرار
-      this.processingOffers.clear();
-      this.connectionAttempts.clear();
-
-      // إيقاف مراقبة الاتصالات
-      this.stopConnectionMonitoring();
+      
+      console.log('✅ Left voice room successfully');
       
     } catch (error) {
       console.error('❌ Error leaving voice room:', error);
@@ -149,77 +154,67 @@ export class WebRTCVoiceService {
   }
 
   // Toggle mute
-  async toggleMute(): Promise<boolean> {
+  async toggleMute(muteState?: boolean): Promise<boolean> {
     if (!this.localStream) return false;
 
     const audioTrack = this.localStream.getAudioTracks()[0];
     if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      this.isMuted = !audioTrack.enabled;
+      // إذا تم تمرير حالة محددة، استخدمها، وإلا قم بالتبديل
+      if (muteState !== undefined) {
+        audioTrack.enabled = !muteState;
+        this.isMuted = muteState;
+      } else {
+        audioTrack.enabled = !audioTrack.enabled;
+        this.isMuted = !audioTrack.enabled;
+      }
+
+      console.log(this.isMuted ? '🔇 Muted' : '🔊 Unmuted');
       return this.isMuted;
     }
 
     return false;
   }
 
-  // Set mute state directly
-  setMute(muted: boolean): void {
-    if (!this.localStream) return;
-
-    const audioTrack = this.localStream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.enabled = !muted;
-      this.isMuted = muted;
-      console.log(`🎤 Local audio ${muted ? 'muted' : 'unmuted'}`);
-    }
-  }
-
-  // Set remote audio muted state
-  setRemoteAudioMuted(muted: boolean): void {
-    this.peerConnections.forEach((connection, userId) => {
-      const remoteStream = connection.getRemoteStreams()[0];
-      if (remoteStream) {
-        const audioTracks = remoteStream.getAudioTracks();
-        audioTracks.forEach(track => {
-          track.enabled = !muted;
-        });
-      }
-    });
-  }
-
   // Create peer connection for a user
   private async createPeerConnection(userId: string): Promise<RTCPeerConnection> {
-    const pc = new RTCPeerConnection({ iceServers: this.iceServers });
-    
-    // Add local stream
+    // إعداد RTCConfiguration محسن لضمان ترتيب ثابت
+    const configuration = {
+      iceServers: this.iceServers,
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle' as RTCBundlePolicy,
+      rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy
+    };
+
+    const pc = new RTCPeerConnection(configuration);
+
+    // Add local stream بترتيب ثابت (audio أولاً)
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => {
+      // إضافة audio tracks أولاً لضمان ترتيب ثابت
+      const audioTracks = this.localStream.getAudioTracks();
+      audioTracks.forEach(track => {
         pc.addTrack(track, this.localStream!);
       });
     }
     
     // Handle remote stream
     pc.ontrack = (event) => {
+      console.log('🔊 Received remote stream from:', userId);
       const [remoteStream] = event.streams;
-      console.log('🎵 Received remote stream from:', userId);
-
+      
       // Play remote audio with echo prevention
       const audio = new Audio();
       audio.srcObject = remoteStream;
-      audio.volume = 0.8;
+      audio.volume = 0.8; // Reduce volume to prevent feedback
       audio.autoplay = true;
 
-      // تأكد من تشغيل الصوت
-      audio.play().then(() => {
-        console.log('✅ Remote audio playing from:', userId);
-      }).catch((error) => {
-        console.warn('⚠️ Audio play failed, trying user interaction:', error);
-        // محاولة تشغيل الصوت عند التفاعل التالي
-        document.addEventListener('click', () => {
-          audio.play().catch(() => {});
-        }, { once: true });
-      });
+      // Prevent echo by ensuring audio doesn't loop back
+      if (audio.setSinkId) {
+        // Use default audio output device
+        audio.setSinkId('default').catch(console.error);
+      }
 
+      audio.play().catch(console.error);
+      
       // Update user
       const user = this.remoteUsers.get(userId) || {
         id: userId,
@@ -244,31 +239,7 @@ export class WebRTCVoiceService {
         });
       }
     };
-
-    // معالج حالة الاتصال
-    pc.onconnectionstatechange = () => {
-      console.log(`🔗 Connection state with ${userId}: ${pc.connectionState}`);
-      if (pc.connectionState === 'connected') {
-        console.log(`✅ Successfully connected to ${userId}`);
-        // إزالة من قائمة المعالجة عند نجاح الاتصال
-        this.processingOffers.delete(userId);
-        this.connectionAttempts.delete(userId);
-      } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        console.log(`❌ Connection failed/disconnected with ${userId}`);
-        // تنظيف الاتصال المعطل
-        this.peerConnections.delete(userId);
-        this.processingOffers.delete(userId);
-      }
-    };
-
-    // معالج حالة ICE
-    pc.oniceconnectionstatechange = () => {
-      console.log(`🧊 ICE state with ${userId}: ${pc.iceConnectionState}`);
-      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        console.log(`🎉 ICE connection established with ${userId}`);
-      }
-    };
-
+    
     this.peerConnections.set(userId, pc);
     return pc;
   }
@@ -277,76 +248,35 @@ export class WebRTCVoiceService {
   private async handleOffer(data: any) {
     try {
       const { offer, fromUserId } = data;
-
-      // منع معالجة offers متكررة من نفس المستخدم
-      if (this.processingOffers.has(fromUserId)) {
-        console.log('⏭️ Already processing offer from:', fromUserId);
-        return;
-      }
-
-      // فحص عدد المحاولات
-      const attempts = this.connectionAttempts.get(fromUserId) || 0;
-      if (attempts >= 3) {
-        console.log('🛑 Too many connection attempts with:', fromUserId);
-        return;
-      }
-
-      this.processingOffers.add(fromUserId);
-      this.connectionAttempts.set(fromUserId, attempts + 1);
-
       console.log('📥 Received offer from:', fromUserId);
-
-      // التحقق من وجود اتصال موجود ومستقر
-      const existingPc = this.peerConnections.get(fromUserId);
-      if (existingPc && existingPc.connectionState === 'connected') {
-        console.log('✅ Connection already established with:', fromUserId);
-        this.processingOffers.delete(fromUserId);
-        return;
-      }
-
-      if (existingPc && existingPc.signalingState !== 'closed') {
-        console.log('🔄 Closing existing connection before creating new one');
-        existingPc.close();
-        this.peerConnections.delete(fromUserId);
-      }
-
       console.log('🔄 Creating peer connection and answer for:', fromUserId);
+
       const pc = await this.createPeerConnection(fromUserId);
+      await pc.setRemoteDescription(offer);
+      console.log('✅ Set remote description (offer)');
 
-      try {
-        await pc.setRemoteDescription(offer);
-        console.log('✅ Set remote description (offer)');
+      // إضافة answerOptions لضمان ترتيب متطابق مع الـ offer
+      const answerOptions = {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false
+      };
 
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        console.log('✅ Created and set local description (answer)');
+      const answer = await pc.createAnswer(answerOptions);
+      await pc.setLocalDescription(answer);
+      console.log('✅ Created and set local description (answer)');
 
-        console.log('📤 Sending WebRTC answer to:', fromUserId);
-        this.wsService.send({
-          type: 'webrtc_answer',
-          data: {
-            answer,
-            targetUserId: fromUserId,
-            fromUserId: this.userId
-          }
-        });
-
-        // إزالة من قائمة المعالجة بعد النجاح
-        setTimeout(() => {
-          this.processingOffers.delete(fromUserId);
-        }, 2000);
-
-      } catch (sdpError) {
-        console.error('❌ SDP error in offer handling:', sdpError);
-        // تنظيف الاتصال المعطل
-        pc.close();
-        this.peerConnections.delete(fromUserId);
-        this.processingOffers.delete(fromUserId);
-      }
+      console.log('📤 Sending WebRTC answer to:', fromUserId);
+      this.wsService.send({
+        type: 'webrtc_answer',
+        data: {
+          answer,
+          targetUserId: fromUserId,
+          fromUserId: this.userId
+        }
+      });
 
     } catch (error) {
       console.error('❌ Error handling offer:', error);
-      this.processingOffers.delete(data.fromUserId);
     }
   }
 
@@ -362,40 +292,29 @@ export class WebRTCVoiceService {
         return;
       }
 
-      // التحقق من حالة الاتصال قبل تطبيق الإجابة
+      // تحقق من حالة الاتصال قبل تطبيق الإجابة
       if (pc.signalingState === 'have-local-offer') {
-        try {
+        // التحقق من تطابق ترتيب m-lines قبل setRemoteDescription
+        const localSdp = pc.localDescription?.sdp || '';
+        const remoteSdp = answer.sdp || '';
+
+        // فحص بسيط لترتيب media lines
+        const localMediaOrder = this.extractMediaOrder(localSdp);
+        const remoteMediaOrder = this.extractMediaOrder(remoteSdp);
+
+        if (localMediaOrder.join(',') === remoteMediaOrder.join(',')) {
           await pc.setRemoteDescription(answer);
           console.log('✅ Set remote description (answer) for:', fromUserId);
-          console.log('🔗 WebRTC connection should be established with:', fromUserId);
-
-          // انتظار قصير للتأكد من استقرار الاتصال
-          setTimeout(() => {
-            if (pc.connectionState === 'connected') {
-              console.log('🎉 Connection confirmed with:', fromUserId);
-            } else {
-              console.log('⏳ Waiting for connection to stabilize with:', fromUserId);
-            }
-          }, 1000);
-
-        } catch (sdpError) {
-          console.warn('⚠️ SDP error, recreating connection:', sdpError.message);
-          // إعادة إنشاء الاتصال في حالة خطأ SDP
+        } else {
+          console.warn('⚠️ Media order mismatch, recreating connection for:', fromUserId);
+          // إعادة إنشاء الاتصال مع ترتيب صحيح
           this.peerConnections.delete(fromUserId);
-          this.processingOffers.delete(fromUserId);
-
-          // محاولة إعادة الاتصال بعد تأخير
-          setTimeout(() => {
-            if (this.userId! < fromUserId) {
-              this.handleUserJoined({ userId: fromUserId });
-            }
-          }, 2000);
+          setTimeout(() => this.sendOffer(fromUserId), 1000);
         }
       } else if (pc.signalingState === 'stable') {
         console.log('ℹ️ Connection already stable with:', fromUserId);
       } else {
-        console.warn('⚠️ Peer connection not in correct state for answer:', pc.signalingState);
-        console.log('🔄 Current state:', pc.signalingState, 'Connection state:', pc.connectionState);
+        console.warn('⚠️ Peer connection in wrong state:', pc.signalingState, 'for:', fromUserId);
       }
 
     } catch (error) {
@@ -409,18 +328,63 @@ export class WebRTCVoiceService {
       const { candidate, fromUserId } = data;
 
       const pc = this.peerConnections.get(fromUserId);
-      if (pc && pc.remoteDescription) {
+      if (!pc) {
+        console.warn('⚠️ No peer connection for ICE candidate from:', fromUserId);
+        return;
+      }
+
+      // تحقق من حالة الاتصال قبل إضافة ICE candidate
+      if (pc.remoteDescription) {
         await pc.addIceCandidate(candidate);
-      } else if (pc) {
-        // Queue ICE candidate if remote description not set yet
-        setTimeout(() => this.handleIceCandidate(data), 100);
+      } else {
+        console.warn('⚠️ No remote description set, skipping ICE candidate from:', fromUserId);
       }
 
     } catch (error) {
-      // Silently ignore ICE candidate errors as they're common and not critical
-      if (!error.message.includes('ICE candidate')) {
-        console.error('❌ Error handling ICE candidate:', error);
-      }
+      console.error('❌ Error handling ICE candidate:', error);
+    }
+  }
+
+  // دالة مساعدة لاستخراج ترتيب media lines من SDP
+  private extractMediaOrder(sdp: string): string[] {
+    const mediaLines = sdp.split('\n').filter(line => line.startsWith('m='));
+    return mediaLines.map(line => {
+      const parts = line.split(' ');
+      return parts[0]; // m=audio أو m=video
+    });
+  }
+
+  // Send offer to specific user (public method)
+  async sendOffer(userId: string): Promise<void> {
+    try {
+      if (userId === this.userId) return; // Skip self
+
+      console.log('🔄 Sending offer to:', userId);
+
+      // Create offer for user
+      const pc = await this.createPeerConnection(userId);
+
+      // إضافة offerOptions لضمان ترتيب ثابت
+      const offerOptions = {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false
+      };
+
+      const offer = await pc.createOffer(offerOptions);
+      await pc.setLocalDescription(offer);
+
+      console.log('📤 Sending WebRTC offer to:', userId);
+      this.wsService.send({
+        type: 'webrtc_offer',
+        data: {
+          offer,
+          targetUserId: userId,
+          fromUserId: this.userId
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error sending offer:', error);
     }
   }
 
@@ -430,54 +394,30 @@ export class WebRTCVoiceService {
       const { userId } = data;
       if (userId === this.userId) return; // Skip self
 
-      // فحص وجود اتصال مستقر بالفعل
-      const existingPc = this.peerConnections.get(userId);
-      if (existingPc && existingPc.connectionState === 'connected') {
-        console.log('✅ Already connected to:', userId);
-        return;
-      }
-
-      // منع المعالجة المتكررة
-      if (this.processingOffers.has(userId)) {
-        console.log('⏭️ Already processing connection with:', userId);
-        return;
-      }
-
+      // تقليل logs - فقط للأحداث المهمة
       console.log('👤 User joined voice room:', userId);
 
-      // تجنب التضارب: فقط المستخدم ذو الـ ID الأصغر يرسل offer
-      const shouldSendOffer = this.userId! < userId;
+      // Create offer for new user
+      const pc = await this.createPeerConnection(userId);
 
-      if (shouldSendOffer) {
-        // فحص عدد المحاولات
-        const attempts = this.connectionAttempts.get(userId) || 0;
-        if (attempts >= 3) {
-          console.log('🛑 Too many offer attempts to:', userId);
-          return;
+      // إضافة offerOptions لضمان ترتيب ثابت
+      const offerOptions = {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false
+      };
+
+      const offer = await pc.createOffer(offerOptions);
+      await pc.setLocalDescription(offer);
+
+      console.log('📤 Sending WebRTC offer to:', userId);
+      this.wsService.send({
+        type: 'webrtc_offer',
+        data: {
+          offer,
+          targetUserId: userId,
+          fromUserId: this.userId
         }
-
-        this.connectionAttempts.set(userId, attempts + 1);
-        console.log('🔄 Creating peer connection and offer for:', userId);
-
-        // Create offer for new user
-        const pc = await this.createPeerConnection(userId);
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        console.log('📤 Sending WebRTC offer to:', userId);
-        this.wsService.send({
-          type: 'webrtc_offer',
-          data: {
-            offer,
-            targetUserId: userId,
-            fromUserId: this.userId
-          }
-        });
-      } else {
-        console.log('⏳ Waiting for offer from:', userId);
-        // إنشاء peer connection فقط، بدون إرسال offer
-        await this.createPeerConnection(userId);
-      }
+      });
 
     } catch (error) {
       console.error('❌ Error handling user joined:', error);
@@ -488,18 +428,14 @@ export class WebRTCVoiceService {
   private handleUserLeft(data: any) {
     const { userId } = data;
     console.log('👋 User left voice room:', userId);
-
+    
     // Close peer connection
     const pc = this.peerConnections.get(userId);
     if (pc) {
       pc.close();
       this.peerConnections.delete(userId);
     }
-
-    // تنظيف متغيرات منع التكرار
-    this.processingOffers.delete(userId);
-    this.connectionAttempts.delete(userId);
-
+    
     // Remove user
     this.remoteUsers.delete(userId);
     this.onUserLeft?.(userId);
@@ -539,7 +475,13 @@ export class WebRTCVoiceService {
       // Calculate average volume
       const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
       const level = Math.round(average * 10) / 10;
-      
+
+      // تحقق من صحة القيم
+      if (isNaN(level) || level < 0) {
+        requestAnimationFrame(checkActivity);
+        return;
+      }
+
       const isSpeaking = level > this.voiceActivityThreshold;
       const now = Date.now();
 
@@ -558,6 +500,11 @@ export class WebRTCVoiceService {
 
           this.lastVoiceActivitySent = now;
           this.isSpeaking = isSpeaking;
+
+          // تقليل logs - فقط للتغييرات المهمة جداً
+          if (stateChanged && isSpeaking && level > 35) {
+            console.log('🎤 Voice activity changed:', isSpeaking ? 'speaking' : 'silent', `(level: ${level})`);
+          }
         }
       }
       
@@ -592,71 +539,34 @@ export class WebRTCVoiceService {
     return Array.from(this.remoteUsers.values());
   }
 
-  // Send offer to a specific user
-  async sendOffer(userId: string): Promise<void> {
-    try {
-      if (userId === this.userId) return; // Skip self
-
-      console.log('🔄 Creating peer connection and offer for:', userId);
-
-      // Create offer for user
-      const pc = await this.createPeerConnection(userId);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      console.log('📤 Sending WebRTC offer to:', userId);
-      this.wsService.send({
-        type: 'webrtc_offer',
-        data: {
-          offer,
-          targetUserId: userId,
-          fromUserId: this.userId
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Error sending offer:', error);
-    }
-  }
-
-  // فحص حالة الاتصالات وإعادة المحاولة إذا لزم الأمر
-  private checkConnectionsAndRetry() {
-    this.peerConnections.forEach((pc, userId) => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        console.log('🔄 Retrying connection with:', userId);
-        this.peerConnections.delete(userId);
-        this.processingOffers.delete(userId);
-
-        // إعادة المحاولة بعد تأخير قصير
-        setTimeout(() => {
-          if (this.userId! < userId) {
-            this.handleUserJoined({ userId });
-          }
-        }, 1000);
-      }
-    });
-  }
-
-  // بدء مراقبة الاتصالات
-  private startConnectionMonitoring() {
-    if (this.connectionMonitorInterval) return;
-
-    this.connectionMonitorInterval = setInterval(() => {
-      this.checkConnectionsAndRetry();
-    }, 5000); // فحص كل 5 ثوان
-  }
-
-  // إيقاف مراقبة الاتصالات
-  private stopConnectionMonitoring() {
-    if (this.connectionMonitorInterval) {
-      clearInterval(this.connectionMonitorInterval);
-      this.connectionMonitorInterval = null;
-    }
-  }
-
   // Cleanup method for React component unmount
   cleanup() {
-    this.stopConnectionMonitoring();
-    this.leaveRoom().catch(console.error);
+    console.log('🧹 Cleaning up WebRTC service...');
+
+    // إيقاف مراقبة الصوت
+    this.stopVoiceActivityDetection();
+
+    // إغلاق جميع اتصالات WebRTC
+    this.peerConnections.forEach((pc, userId) => {
+      console.log('🔌 Closing connection with:', userId);
+      pc.close();
+    });
+    this.peerConnections.clear();
+
+    // إيقاف الـ stream المحلي
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('🛑 Stopped local track:', track.kind);
+      });
+      this.localStream = null;
+    }
+
+    // تنظيف المتغيرات
+    this.remoteUsers.clear();
+    this.isJoined = false;
+    this.isMonitoringVoice = false;
+
+    console.log('✅ WebRTC cleanup completed');
   }
 }

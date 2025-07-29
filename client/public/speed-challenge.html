@@ -1216,7 +1216,8 @@
                         if (window.playerHeader && typeof window.playerHeader.updateBalance === 'function') {
                             window.playerHeader.updateBalance(balanceUpdate.newBalance);
                         }
-
+                        // لا تعدل الرصيد محلياً هنا
+                        // gameState.coins += points;
                         // تسجيل المزامنة للمراقبة
                         console.log(`🔄 مزامنة فورية: ${points > 0 ? '+' : ''}${points} | رصيد جديد: ${balanceUpdate.newBalance}`);
                     }

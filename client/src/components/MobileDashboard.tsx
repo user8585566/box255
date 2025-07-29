@@ -112,15 +112,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ userData, onLogout, o
       case 'leaderboard':
         return <LeaderboardContent />;
       case 'voice':
-        return wsService ? (
-          <MobileVoiceRoom
-            user={currentUserData}
-            wsService={wsService}
-            onBack={() => navigateToTab('games')}
-          />
-        ) : (
-          <div className="p-4 text-center text-red-400">خدمة WebSocket غير متاحة</div>
-        );
+        return wsService ? <MobileVoiceRoom user={currentUserData} wsService={wsService} /> : <div className="p-4 text-center text-red-400">خدمة WebSocket غير متاحة</div>;
       case 'profile':
         return <MobileProfileCard
           userData={currentUserData}
@@ -192,9 +184,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ userData, onLogout, o
               src={currentUserData?.profileImage || '/images/default-avatar.png'}
               alt={currentUserData?.username}
               className="w-9 h-9 rounded-full border-2 border-white/30 object-cover"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = '/images/default-avatar.png';
-              }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/images/default-avatar.png'; }}
             />
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
           </div>

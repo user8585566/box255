@@ -149,12 +149,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout, wsService
             <div className="flex items-center space-x-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-purple-500/30 hover:from-purple-500/30 hover:to-blue-500/30 transition-all duration-300 shadow-lg">
               <div className="relative">
                 <img 
-                  src={user.profileImage || '/images/default-avatar.png'} 
+                  src={user.profileImage || '/images/default-avatar.png'}
                   alt={user.username}
                   className="w-12 h-12 rounded-full border-2 border-white/30 shadow-lg object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = '/images/default-avatar.png';
-                  }}
+                  onError={(e) => { e.currentTarget.src = '/images/default-avatar.png'; }}
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
               </div>
@@ -241,6 +239,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout, wsService
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'games' && (
           <GameGrid setActiveTab={handleTabChange} />
+        )}
+        {activeTab === 'games' && (
+          <div className="flex justify-center my-6">
+            <button
+              className="bg-gradient-to-r from-purple-600 to-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:from-purple-700 hover:to-blue-600 transition-all text-lg"
+              onClick={() => window.location.href = '/create-voice-room'}
+            >
+              🎤 أنشئ غرفتك الصوتية
+            </button>
+          </div>
         )}
         {activeTab === 'leaderboard' && (
           <div className="text-center">

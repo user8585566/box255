@@ -1227,10 +1227,8 @@ const MobileProfileCard: React.FC<MobileProfileCardProps> = ({
   const getProfileImage = () => {
     if (selectedImage) return selectedImage;
     if (userData?.profileImage) return userData.profileImage;
-    // صورة افتراضية حسب الجنس
-    return userData?.gender === 'female' 
-      ? 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iNTAiIGZpbGw9IiNGRjY5QjQiLz4KPHN2ZyB4PSIyNSIgeT0iMjUiIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQzEzLjEgMiAxNCAyLjkgMTQgNFMxMy4xIDYgMTIgNiAxMCA1LjEgMTAgNFMxMC45IDIgMTIgMlpNMjEgOVYxMUgyMFYxMkMxOS4xIDEyIDE4LjQgMTIuNiAxOC4xIDEzLjNDMTcuMSAxMS45IDE1LjEgMTEgMTMuOCAxMC43QzE0IDEwLjUgMTQuMSAxMC4yIDE0LjEgMTBDMTQgOS4xIDEzLjYgOC40IDEzIDhDMTMuNCA3LjYgMTMuNyA3IDE0IDYuOUMxNS40IDcuNyAxNi4yIDkuMSAxNiAzMEMxOC40IDI5IDEwLjUgMzAgOFMxMS42IDI5IDEwIDI5LjdIMThDMTggMjguNSAxOC4zIDI3LjUgMTguOSAyNi43QzE5LjMgMjcuMSAxOS44IDI3LjMgMjAuNSAyNy4zSDE5QzE5IDI3IDEwLjMgMjcgMTAuNSAyNy4zSDE5LjQgMjEgOVoiLz4KPHN2Zz4KPHN2Zz4K'
-      : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iNTAiIGZpbGw9IiMzQjgyRjYiLz4KPHN2ZyB4PSIyNSIgeT0iMjUiIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQTMgMyAwIDAgMSAxNSA1QTMgMyAwIDAgMSAxMiA4QTMgMyAwIDAgMSA5IDVBMyAzIDAgMCAxIDEyIDJNMjEgMjFWMjBDMjEgMTYuMTMgMTcuODcgMTMgMTQgMTNIMTBDNi4xMyAxMyAzIDE2LjEzIDMgMjBWMjFIMjFaIi8+Cjwvc3ZnPgo=';
+    // صورة افتراضية موحدة
+    return '/images/default-avatar.png';
   };
 
   return (
@@ -2074,10 +2072,8 @@ const MobileProfileCard: React.FC<MobileProfileCardProps> = ({
         {/* Charge Section */}
         {isOwner && activeSection === 'charge' && (
           <div className="space-y-4">
-            <div className="text-center mb-6">
-              <div className="text-5xl mb-4 drop-shadow-lg">💰</div>
-              <h3 className="text-xl font-bold text-white mb-2">شحن الرصيد الذهبي</h3>
-              <p className="text-gray-300 text-sm">اشحن عملاتك الذهبية بأفضل الأسعار</p>
+            <div className="bg-yellow-900/80 border border-yellow-400/40 rounded-xl p-4 text-center text-yellow-100 font-bold text-base mb-4 shadow-lg">
+              لا يمكن سحب الأرباح مباشرة. يجب عليك أولاً تحويل الذهب إلى لؤلؤ ثم التواصل مع الإدارة لسحب الأرباح.
             </div>
             <div className="grid grid-cols-1 gap-4">
               <div className="bg-gradient-to-br from-yellow-800/60 to-amber-800/60 p-6 rounded-2xl border border-yellow-400/30 shadow-xl backdrop-blur-sm">
@@ -2220,7 +2216,7 @@ const MobileProfileCard: React.FC<MobileProfileCardProps> = ({
                   معلومات مهمة
                 </h4>
                 <div className="space-y-2 text-amber-100 text-sm leading-relaxed">
-                  <p>• <strong>اللآلئ 🦪</strong> - مخصصة حصرياً للتحويل إلى دولارات نقدية</p>
+                  <p>• <strong>اللآلئ ��</strong> - مخصصة حصرياً للتحويل إلى دولارات نقدية</p>
                   <p>• <strong>العملات الذهبية 🪙</strong> - للشراء والتبادل داخل المنصة</p>
                   <p>• <strong>العناصر الخاصة</strong> - تُكسب من الألعاب والتحديات</p>
                 </div>

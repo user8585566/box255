@@ -357,19 +357,11 @@ const ImageManagement: React.FC = () => {
   };
 
   const getImageStatus = (user: User) => {
-    const imageUrl = user.profileImage || user.avatar;
-    return imageUrl ? 'موجودة' : 'غير موجودة';
+    return user.profileImage ? 'موجودة' : 'غير موجودة';
   };
 
   const getImagePreview = (user: User) => {
-    const imageUrl = user.profileImage || user.avatar;
-    console.log(`🖼️ Getting image for user ${user.username}:`, {
-      hasProfileImage: !!user.profileImage,
-      hasAvatar: !!user.avatar,
-      profileImageLength: user.profileImage?.length || 0,
-      finalImageUrl: imageUrl ? 'HAS_IMAGE' : 'NO_IMAGE'
-    });
-    return imageUrl || '/images/default-avatar.png';
+    return user.profileImage || '/images/default-avatar.png';
   };
 
   return (
@@ -396,7 +388,7 @@ const ImageManagement: React.FC = () => {
           <div className="flex items-center gap-3">
             <Image className="w-8 h-8 text-green-400" />
             <div>
-              <p className="text-2xl font-bold text-white">{users.filter(u => u.profileImage || u.avatar).length}</p>
+              <p className="text-2xl font-bold text-white">{users.filter(u => u.profileImage).length}</p>
               <p className="text-sm text-gray-400">لديهم صور</p>
             </div>
           </div>
@@ -405,7 +397,7 @@ const ImageManagement: React.FC = () => {
           <div className="flex items-center gap-3">
             <Eye className="w-8 h-8 text-purple-400" />
             <div>
-              <p className="text-2xl font-bold text-white">{users.filter(u => !u.profileImage && !u.avatar).length}</p>
+              <p className="text-2xl font-bold text-white">{users.filter(u => !u.profileImage).length}</p>
               <p className="text-sm text-gray-400">بدون صور</p>
             </div>
           </div>

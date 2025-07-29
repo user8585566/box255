@@ -24,7 +24,6 @@ import {
   MessageSquareOff,
   MessageSquare,
   ArrowDown,
-  ArrowLeft,
   Trash2,
   MoreVertical,
   Smile,
@@ -40,7 +39,6 @@ import {
 interface MobileVoiceRoomProps {
   user: User;
   wsService: WebSocketService;
-  onBack?: () => void;
 }
 
 interface VoiceSeat {
@@ -105,21 +103,14 @@ interface VoiceMessage {
   messageType: 'text' | 'system' | 'mic_request';
 }
 
-const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBack }) => {
-  // دالة افتراضية للعودة إذا لم يتم تمريرها
-  const handleBack = onBack || (() => {
-    // يمكن إضافة منطق افتراضي هنا مثل العودة للصفحة الرئيسية
-    window.history.back();
-  });
-
+const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService }) => {
   const [roomData, setRoomData] = useState<VoiceRoomData | null>(null);
   const [messages, setMessages] = useState<VoiceMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); // للتحديثات الخلفية
   const [error, setError] = useState<string | null>(null);
   const [isInSeat, setIsInSeat] = useState(false);
   const [currentSeatNumber, setCurrentSeatNumber] = useState<number | null>(null);
-  const [isInWaitingQueue, setIsInWaitingQueue] = useState(false);
+  // إزالة قائمة الانتظار - تبسيط النظام
   const [isMuted, setIsMuted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [messageInput, setMessageInput] = useState('');
@@ -128,26 +119,12 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
   const [showKickModal, setShowKickModal] = useState<string | null>(null);
   const [kickDuration, setKickDuration] = useState('30'); // بالدقائق
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedTextColor, setSelectedTextColor] = useState('#ffffff');
   const [textSuggestions, setTextSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
-  // ألوان المحادثة المتاحة
-  const chatColors = [
-    { name: 'أبيض', value: '#ffffff' },
-    { name: 'أحمر', value: '#ef4444' },
-    { name: 'أزرق', value: '#3b82f6' },
-    { name: 'أخضر', value: '#10b981' },
-    { name: 'أصفر', value: '#f59e0b' },
-    { name: 'بنفسجي', value: '#8b5cf6' },
-    { name: 'وردي', value: '#ec4899' },
-    { name: 'برتقالي', value: '#f97316' },
-    { name: 'سماوي', value: '#06b6d4' },
-    { name: 'ذهبي', value: '#eab308' }
-  ];
   const [currentGame, setCurrentGame] = useState<string | null>(null);
   const [showGameArea, setShowGameArea] = useState(false);
+  const [audioTestMode, setAudioTestMode] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
   const [audioPermission, setAudioPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   const [isSoundMuted, setIsSoundMuted] = useState(false);
 
@@ -157,15 +134,10 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // تحميل بيانات الغرفة الصوتية (التحميل الأولي فقط)
-  const loadVoiceRoom = async (isInitialLoad = false) => {
+  // تحميل بيانات الغرفة الصوتية
+  const loadVoiceRoom = async () => {
     try {
-      if (isInitialLoad) {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
-
+      setIsLoading(true);
       const [roomResponse, messagesResponse] = await Promise.all([
         apiService.getVoiceRoom(),
         apiService.getVoiceRoomMessages()
@@ -201,11 +173,7 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
         setCurrentSeatNumber(null);
       }
 
-      // التحقق من قائمة الانتظار
-      const inQueue = roomResponse.waitingQueue.some((item: any) => 
-        item.user._id === user.id
-      );
-      setIsInWaitingQueue(inQueue);
+      // قائمة الانتظار تم إلغاؤها - تبسيط النظام
 
       setError(null);
     } catch (err: any) {
@@ -234,7 +202,49 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
       setError(err.message || 'خطأ في تحميل الغرفة الصوتية');
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
+    }
+  };
+
+  // تحديث صامت للغرفة (بدون loading) - للحفاظ على ثبات الغرفة
+  const updateVoiceRoomSilently = async () => {
+    try {
+      const [roomResponse, messagesResponse] = await Promise.all([
+        apiService.getVoiceRoom(),
+        apiService.getVoiceRoomMessages()
+      ]);
+
+      setRoomData(roomResponse);
+
+      // تحديث الرسائل مع بيانات المرسل الكاملة
+      const messagesWithFullSender = messagesResponse.map((message: any) => ({
+        ...message,
+        sender: {
+          ...message.sender,
+          role: message.sender.role || (message.sender.isAdmin ? 'admin' : 'member'),
+          isAdmin: message.sender.isAdmin || false,
+          gender: message.sender.gender || 'male'
+        }
+      }));
+      setMessages(messagesWithFullSender);
+
+      // التحقق من حالة المستخدم الحالي
+      const userSeat = roomResponse.seats.find((seat: VoiceSeat) =>
+        seat.user && seat.user._id === user.id
+      );
+
+      if (userSeat) {
+        setIsInSeat(true);
+        setCurrentSeatNumber(userSeat.seatNumber);
+        setIsMuted(userSeat.isMuted);
+      } else {
+        setIsInSeat(false);
+        setCurrentSeatNumber(null);
+      }
+
+      setError(null);
+    } catch (err: any) {
+      console.error('Error updating voice room silently:', err);
+      // لا نعرض خطأ للمستخدم في التحديث الصامت
     }
   };
 
@@ -260,37 +270,40 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
       }
     };
 
-    // معالج النشاط الصوتي
+    // معالج النشاط الصوتي (مع تقليل logs)
     webrtcServiceRef.current.onVoiceActivity = (data: any) => {
-      // تحديث حالة التحدث في الغرفة المحلية
-      setRoomData(prev => ({
-        ...prev,
-        seats: prev.seats.map(seat =>
-          seat.user?._id === user.id
-            ? { ...seat, isSpeaking: data.isSpeaking }
-            : seat
-        )
-      }));
+      if (data && typeof data.level === 'number') {
+        setMicLevel(data.level);
 
-      // إرسال Voice Activity للمستخدمين الآخرين عبر WebSocket
-      if (isInSeat) {
-        wsService.send({
-          type: 'voice_activity',
-          data: {
-            userId: user.id,
-            username: user.username,
-            role: user.role,
-            isAdmin: user.isAdmin,
-            level: data.level,
-            isSpeaking: data.isSpeaking,
-            isMuted: isMuted,
-            seatNumber: currentSeatNumber
-          }
-        });
+        // تحديث حالة التحدث في الغرفة
+        setRoomData(prev => ({
+          ...prev,
+          seats: prev.seats.map(seat =>
+            seat.user?._id === user.id
+              ? { ...seat, isSpeaking: data.isSpeaking }
+              : seat
+          )
+        }));
       }
     };
 
     return () => {
+      console.log('🧹 Component cleanup - leaving voice room...');
+
+      // إذا كان المستخدم في مقعد، اتركه أولاً
+      if (isInSeat) {
+        console.log('🚪 User was in seat, leaving seat...');
+        // مغادرة المقعد على الخادم
+        apiService.leaveVoiceSeat().catch(console.error);
+
+        // إشعار المستخدمين الآخرين
+        wsService.send({
+          type: 'voice_room_update',
+          data: { action: 'seat_left', userId: user.id }
+        });
+      }
+
+      // تنظيف WebRTC
       webrtcServiceRef.current?.cleanup();
     };
   }, [wsService, user.id]);
@@ -298,16 +311,15 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
   // إعداد WebSocket listeners
   useEffect(() => {
     const handleVoiceRoomMessage = (data: any) => {
-      // التأكد من أن الرسالة تحتوي على بيانات المرسل الكاملة والتأثيرات البصرية
+      // التأكد من أن الرسالة تحتوي على بيانات المرسل الكاملة
       const messageWithFullSender = {
         ...data,
         sender: {
           ...data.sender,
-          role: data.senderRole || data.sender.role || (data.sender.isAdmin ? 'admin' : 'member'),
-          isAdmin: data.senderIsAdmin || data.sender.isAdmin || false,
-          gender: data.senderGender || data.sender.gender || 'male'
-        },
-        textColor: data.textColor || '#ffffff' // لون النص المختار
+          role: data.sender.role || (data.sender.isAdmin ? 'admin' : 'member'),
+          isAdmin: data.sender.isAdmin || false,
+          gender: data.sender.gender || 'male'
+        }
       };
 
       // تجنب إضافة الرسالة مرتين - لا نضيف رسائل المستخدم الحالي لأنها مضافة محلياً
@@ -320,15 +332,34 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
     };
 
     const handleVoiceRoomUpdate = (data: any) => {
-      // إعادة تحميل في الخلفية لضمان التزامن
-      loadVoiceRoom(false).then(() => {
-        // بعد التحميل، إرسال WebRTC offer إذا لزم الأمر
-        if (data.action === 'seat_joined' && isInSeat && data.userId !== user.id) {
-          setTimeout(() => {
-            webrtcServiceRef.current?.sendOffer(data.userId);
-          }, 1000);
+      // لا نعيد تحميل الغرفة عند الكتم - نبقيها ثابتة
+      if (data.action === 'mute_toggled') {
+        // تحديث محلي فقط لحالة الكتم بدون إعادة تحميل
+        if (roomData) {
+          const updatedSeats = roomData.seats.map(seat => {
+            if (seat.user && seat.user._id === data.userId) {
+              return { ...seat, isMuted: data.isMuted };
+            }
+            return seat;
+          });
+          setRoomData({ ...roomData, seats: updatedSeats });
         }
-      });
+      } else {
+        // تحديث صامت للحفاظ على ثبات الغرفة
+        updateVoiceRoomSilently();
+      }
+
+      if (data.action === 'seat_joined' && isInSeat && data.userId !== user.id) {
+        console.log('🔄 User joined seat, initiating WebRTC connection:', data.userId);
+        setTimeout(() => {
+          if (webrtcServiceRef.current) {
+            console.log('📞 Sending offer to new user:', data.userId);
+            webrtcServiceRef.current.sendOffer(data.userId);
+          } else {
+            console.warn('⚠️ WebRTC service not available for offer');
+          }
+        }, 1000);
+      }
     };
 
     // معالج التحديثات الإدارية المحسن
@@ -352,27 +383,16 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
     };
 
     const handleVoiceActivity = (data: any) => {
-      const { userId, isSpeaking, role, isAdmin, isMuted, seatNumber } = data;
+      const { userId, isSpeaking } = data;
 
-      // تحديث حالة التحدث للمستخدمين الآخرين مع التأثيرات البصرية
+      // تحديث حالة التحدث للمستخدمين الآخرين (بدون logs مفرطة)
       setRoomData(prev => ({
         ...prev,
-        seats: prev.seats.map(seat => {
-          if (seat.user?._id === userId) {
-            return {
-              ...seat,
-              isSpeaking,
-              isMuted,
-              // تحديث معلومات المستخدم للتأثيرات البصرية
-              user: {
-                ...seat.user,
-                role: role || seat.user.role,
-                isAdmin: isAdmin || seat.user.isAdmin
-              }
-            };
-          }
-          return seat;
-        })
+        seats: prev.seats.map(seat =>
+          seat.user?._id === userId
+            ? { ...seat, isSpeaking }
+            : seat
+        )
       }));
     };
 
@@ -395,7 +415,7 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
 
   // تحميل البيانات عند بدء التشغيل
   useEffect(() => {
-    loadVoiceRoom(true); // التحميل الأولي
+    loadVoiceRoom();
     // تسجيل دور المستخدم للتشخيص
     console.log('User role:', user.role);
     console.log('User isAdmin:', user.isAdmin);
@@ -437,14 +457,11 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
       if (showEmojiPicker) {
         setShowEmojiPicker(false);
       }
-      if (showColorPicker) {
-        setShowColorPicker(false);
-      }
     };
 
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [showAdminMenu, showEmojiPicker, showColorPicker]);
+  }, [showAdminMenu, showEmojiPicker]);
 
   // إضافة تحذير عند مغادرة الصفحة إذا كان المستخدم في مقعد
   useEffect(() => {
@@ -459,18 +476,49 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
     const handleUnload = () => {
       // إذا غادر المستخدم الصفحة وهو في مقعد، أرسل إشارة مغادرة
       if (isInSeat) {
-        navigator.sendBeacon('/api/voice-room/leave-seat', JSON.stringify({
-          userId: user.id
-        }));
+        console.log('🚪 Page unload - user leaving seat via beacon');
+
+        // استخدام sendBeacon لضمان وصول الرسالة
+        const token = localStorage.getItem('token');
+        if (token) {
+          navigator.sendBeacon('/api/voice-room/leave-seat', JSON.stringify({
+            userId: user.id,
+            token: token
+          }));
+        }
+
+        // إشعار WebSocket إذا كان متاح
+        try {
+          wsService.send({
+            type: 'voice_room_update',
+            data: { action: 'seat_left', userId: user.id }
+          });
+        } catch (error) {
+          console.warn('WebSocket not available for unload notification');
+        }
+      }
+    };
+
+    // معالج إخفاء/إظهار الصفحة (تبديل التبويبات)
+    const handleVisibilityChange = () => {
+      if (document.hidden && isInSeat) {
+        console.log('📱 Page hidden - user still in seat');
+        // لا نخرج المستخدم عند إخفاء الصفحة فقط
+      } else if (!document.hidden && isInSeat) {
+        console.log('📱 Page visible - user back in seat');
+        // تحديث حالة الغرفة عند العودة (صامت)
+        updateVoiceRoomSilently();
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('unload', handleUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('unload', handleUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isInSeat, user.id]);
 
@@ -491,21 +539,14 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
         },
         content: content,
         timestamp: new Date().toISOString(),
-        messageType: 'text',
-        textColor: selectedTextColor // إضافة لون النص
+        messageType: 'text'
       };
 
       setMessages(prev => [...prev, newMessage]);
 
       wsService.send({
         type: 'voice_room_message',
-        data: {
-          ...response.messageData,
-          textColor: selectedTextColor,
-          senderRole: user.role,
-          senderIsAdmin: user.isAdmin,
-          senderGender: user.gender
-        }
+        data: response.messageData
       });
     } catch (err: any) {
       console.error('Error sending message:', err);
@@ -523,6 +564,9 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
         type: 'voice_room_update',
         data: { action: 'mic_requested', userId: user.id }
       });
+      
+      // تحديث صامت بعد طلب المايك
+      await updateVoiceRoomSilently();
     } catch (err: any) {
       console.error('Error requesting mic:', err);
       setError(err.message || 'خطأ في طلب المايك');
@@ -557,6 +601,22 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
         type: 'voice_room_update',
         data: { action: 'seat_joined', userId: user.id, seatNumber }
       });
+
+      // تحديث صامت بعد الانضمام للمقعد
+      await updateVoiceRoomSilently();
+
+      // إضافة آلية للتأكد من الاتصال مع المستخدمين الموجودين
+      setTimeout(() => {
+        if (webrtcServiceRef.current && roomData) {
+          console.log('🔄 Checking for existing users to connect with...');
+          roomData.seats.forEach(seat => {
+            if (seat.user && seat.user._id !== user.id) {
+              console.log('📞 Initiating connection with existing user:', seat.user._id);
+              webrtcServiceRef.current?.sendOffer(seat.user._id);
+            }
+          });
+        }
+      }, 2000);
     } catch (err: any) {
       console.error('Error joining seat:', err);
       setError(err.message || 'خطأ في الانضمام للمقعد');
@@ -587,44 +647,30 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
         type: 'voice_room_update',
         data: { action: 'seat_left', userId: user.id, seatNumber: currentSeatNumber }
       });
+
+      // تحديث صامت بعد مغادرة المقعد
+      await updateVoiceRoomSilently();
     } catch (err: any) {
       console.error('Error leaving seat:', err);
-      // تجاهل خطأ "لست في أي مقعد" لأنه غير مهم
-      if (!err.message?.includes('لست في أي مقعد')) {
-        setError(err.message || 'خطأ في مغادرة المقعد');
-      }
+      setError(err.message || 'خطأ في مغادرة المقعد');
     }
   };
 
   // تبديل كتم المايك
   const toggleMute = async () => {
     try {
-      if (!isInSeat) {
-        setError('يجب أن تكون في مقعد لاستخدام المايك');
-        return;
-      }
-
-      if (!webrtcServiceRef.current) {
-        setError('خدمة الصوت غير متاحة - جاري إعادة الاتصال...');
-        // محاولة إعادة تهيئة WebRTC
-        await initializeWebRTC();
-        return;
-      }
-
       const newMutedState = !isMuted;
 
-      // تطبيق الكتم في WebRTC أولاً
-      webrtcServiceRef.current.setMute(newMutedState);
-
-      // تحديث الحالة المحلية
+      // تحديث الحالة المحلية أولاً للاستجابة السريعة
       setIsMuted(newMutedState);
 
-      // تحديث الخادم
-      try {
-        await apiService.toggleMute(newMutedState);
-      } catch (serverError) {
-        console.warn('Failed to update server mute state:', serverError);
+      // تطبيق الكتم على WebRTC
+      if (webrtcServiceRef.current) {
+        await webrtcServiceRef.current.toggleMute(newMutedState);
       }
+
+      // تحديث الخادم
+      await apiService.toggleMute(newMutedState);
 
       // إشعار المستخدمين الآخرين
       wsService.send({
@@ -632,36 +678,29 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
         data: { action: 'mute_toggled', userId: user.id, isMuted: newMutedState }
       });
 
+      console.log(`🎤 Microphone ${newMutedState ? 'muted' : 'unmuted'}`);
     } catch (err: any) {
       console.error('Error toggling mute:', err);
-      setError('خطأ في تبديل كتم المايك');
-      // إعادة تعيين الحالة في حالة الخطأ
+      // إعادة الحالة في حالة الخطأ
       setIsMuted(!isMuted);
+      setError(err.message || 'خطأ في تبديل كتم المايك');
     }
   };
 
   // كتم/إلغاء كتم الصوت
   const toggleSound = () => {
-    try {
-      const newSoundMuted = !isSoundMuted;
-      setIsSoundMuted(newSoundMuted);
+    const newSoundMuted = !isSoundMuted;
+    setIsSoundMuted(newSoundMuted);
 
-      // كتم جميع عناصر الصوت البعيدة
-      remoteAudiosRef.current.forEach(audio => {
-        audio.muted = newSoundMuted;
-      });
+    // كتم جميع عناصر الصوت البعيدة
+    remoteAudiosRef.current.forEach(audio => {
+      audio.muted = newSoundMuted;
+    });
 
-      // كتم جميع peer connections أيضاً
-      if (webrtcServiceRef.current) {
-        webrtcServiceRef.current.setRemoteAudioMuted(newSoundMuted);
-      }
+    // حفظ الحالة في localStorage
+    localStorage.setItem('soundMuted', newSoundMuted.toString());
 
-      // حفظ الحالة في localStorage
-      localStorage.setItem('soundMuted', newSoundMuted.toString());
-    } catch (error) {
-      console.error('Error toggling sound:', error);
-      setError('خطأ في تبديل كتم الصوت');
-    }
+    console.log(`🔊 Sound ${newSoundMuted ? 'muted' : 'unmuted'}`);
   };
 
   // معالجة تغيير النص
@@ -877,7 +916,59 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
     };
   }, [showGameArea]);
 
+  // اختبار الصوت والمايك
+  const testAudio = async () => {
+    try {
+      setAudioTestMode(true);
 
+      // طلب إذن المايك
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      setAudioPermission('granted');
+
+      // إنشاء AudioContext لقياس مستوى الصوت
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const microphone = audioContext.createMediaStreamSource(stream);
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      microphone.connect(analyser);
+      analyser.fftSize = 256;
+
+      // مراقبة مستوى الصوت
+      const checkAudioLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        setMicLevel(Math.min(100, (average / 128) * 100));
+
+        if (audioTestMode) {
+          requestAnimationFrame(checkAudioLevel);
+        }
+      };
+
+      checkAudioLevel();
+
+      // إيقاف الاختبار بعد 10 ثوان
+      setTimeout(() => {
+        setAudioTestMode(false);
+        stream.getTracks().forEach(track => track.stop());
+        audioContext.close();
+        setMicLevel(0);
+      }, 10000);
+
+    } catch (error) {
+      console.error('Audio test failed:', error);
+      setAudioPermission('denied');
+      setAudioTestMode(false);
+      setError('فشل في الوصول للمايك. تأكد من منح الإذن في المتصفح.');
+    }
+  };
 
   // فحص حالة إذن الصوت عند التحميل
   useEffect(() => {
@@ -903,7 +994,32 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
     }
   }, []);
 
+  // محاكاة حالة التحدث للاختبار
+  const simulateSpeaking = () => {
+    if (!isInSeat) return;
 
+    // تحديث حالة التحدث محلياً للاختبار
+    setRoomData(prev => ({
+      ...prev,
+      seats: prev.seats.map(seat =>
+        seat.user?._id === user.id
+          ? { ...seat, isSpeaking: true }
+          : seat
+      )
+    }));
+
+    // إيقاف المحاكاة بعد 3 ثوان
+    setTimeout(() => {
+      setRoomData(prev => ({
+        ...prev,
+        seats: prev.seats.map(seat =>
+          seat.user?._id === user.id
+            ? { ...seat, isSpeaking: false }
+            : seat
+        )
+      }));
+    }, 3000);
+  };
 
 
 
@@ -978,80 +1094,66 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white overflow-hidden">
-      {/* Header - مضغوط ومحسن */}
-      <div className="bg-black/30 backdrop-blur-sm border-b border-white/10 p-2 flex-shrink-0">
+    <div className="h-full flex flex-col bg-gradient-to-br from-gray-900/50 to-purple-900/30">
+      {/* Header */}
+      <div className="p-3 border-b border-purple-500/20">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleBack}
-              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h1 className="text-sm font-bold flex items-center gap-1">
-                <Volume2 className="w-3 h-3 text-purple-400" />
-                INFINITY ROOM
-              </h1>
-              <p className="text-xs text-gray-300">غرفة صوتية للمحادثة</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-xs">
-            {/* مؤشر التحديث في الخلفية */}
-            {isRefreshing && (
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1"></div>
-            )}
-            <Users className="w-3 h-3 text-gray-400" />
-            <span className="text-gray-300">
-              {(roomData.seats?.filter(seat => seat.user).length || 0)}/5
+          <h1 className="text-sm font-bold text-white flex items-center gap-2">
+            <Volume2 className="w-4 h-4 text-purple-400" />
+            INFINITY ROOM
+          </h1>
+
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <Users className="w-3 h-3" />
+            <span>
+              {(roomData.seats?.filter(seat => seat.user).length || 0) + (roomData.listeners?.length || 0)}/{roomData.maxUsers || 100}
             </span>
+            <span className="text-gray-500">
+              (🎤 {roomData.seats?.filter(seat => seat.user).length || 0}/5)
+            </span>
+            {/* مؤشر الأدمن للاختبار */}
             {(user.role === 'admin' || user.isAdmin) && (
-              <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-xs ml-1">ADMIN</span>
+              <span className="bg-red-600 text-white px-2 py-1 rounded text-xs">ADMIN</span>
             )}
           </div>
         </div>
 
-        {/* Control Buttons - مضغوطة ومحسنة */}
-        {isInSeat && (
-          <div className="bg-black/20 backdrop-blur-sm rounded-lg p-2 mt-2">
-            <div className="flex items-center gap-1 mb-2">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-green-400 font-medium">مقعد {currentSeatNumber}</span>
-            </div>
+        {/* Control Buttons */}
+        {(isInSeat || currentSeatNumber !== null) && (
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={toggleMute}
+              disabled={!isInSeat}
+              className={`py-1.5 px-3 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                !isInSeat
+                  ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                  : isMuted
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+              <span className="text-xs">{isMuted ? 'إلغاء كتم' : 'كتم مايك'}</span>
+            </button>
 
-            <div className="flex items-center gap-1">
-              <button
-                onClick={toggleMute}
-                className={`flex-1 py-1.5 px-2 rounded-md transition-colors flex items-center justify-center gap-1 text-xs font-medium ${
-                  isMuted
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                {isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                <span>{isMuted ? 'إلغاء كتم' : 'كتم'}</span>
-              </button>
+            <button
+              onClick={toggleSound}
+              className={`py-1.5 px-3 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                isSoundMuted
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {isSoundMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+              <span className="text-xs">{isSoundMuted ? 'إلغاء كتم' : 'كتم صوت'}</span>
+            </button>
 
-              <button
-                onClick={toggleSound}
-                className={`flex-1 py-1.5 px-2 rounded-md transition-colors flex items-center justify-center gap-1 text-xs font-medium ${
-                  isSoundMuted
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isSoundMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                <span>{isSoundMuted ? 'تشغيل' : 'صامت'}</span>
-              </button>
-
-              <button
-                onClick={leaveSeat}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-md text-white transition-colors text-xs font-medium"
-              >
-                مغادرة
-              </button>
-            </div>
+            <button
+              onClick={leaveSeat}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-colors text-xs"
+            >
+              مغادرة
+            </button>
           </div>
         )}
 
@@ -1067,12 +1169,45 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                   : 'bg-yellow-500'
             }`}></div>
 
-
+            {/* مؤشر مستوى الصوت */}
+            <div className="flex items-center gap-1">
+              <Mic className={`w-3 h-3 ${
+                audioTestMode && micLevel > 10
+                  ? 'text-green-400'
+                  : 'text-gray-400'
+              }`} />
+              <div className="w-12 h-1.5 bg-gray-600 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-100 ${
+                    micLevel > 70 ? 'bg-red-500' :
+                    micLevel > 30 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${micLevel}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
 
+          <button
+            onClick={testAudio}
+            disabled={audioTestMode}
+            className={`px-2 py-1 text-xs rounded transition-colors ${
+              audioTestMode
+                ? 'bg-yellow-600 text-white cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            {audioTestMode ? 'اختبار...' : 'اختبار مايك'}
+          </button>
 
-
-
+          {isInSeat && (
+            <button
+              onClick={simulateSpeaking}
+              className="px-2 py-1 text-xs rounded bg-green-600 hover:bg-green-700 text-white transition-colors"
+            >
+              محاكاة تحدث
+            </button>
+          )}
 
           {audioPermission === 'denied' && (
             <span className="text-xs text-red-400">
@@ -1086,24 +1221,24 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
 
       {/* Content - المقاعد والمحادثة في شاشة واحدة */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* المقاعد الصوتية - مضغوطة */}
-        <div className="p-2 border-b border-gray-700/50 flex-shrink-0">
-          {/* المقاعد المدورة - صف واحد مضغوط */}
-          <div className="flex justify-center gap-1.5 mb-1 overflow-x-auto px-1">
+        {/* المقاعد الصوتية */}
+        <div className="p-3 border-b border-gray-700/50">
+          {/* المقاعد المدورة - صف واحد */}
+          <div className="flex justify-center gap-2 mb-2 overflow-x-auto px-1">
             {roomData.seats.map((seat) => (
               <div key={seat.seatNumber} className="flex flex-col items-center flex-shrink-0">
                 {seat.user ? (
                   <div className="relative">
-                    {/* صورة المستخدم مع حدود ملونة - حجم أصغر */}
-                    <div className={`relative w-12 h-12 rounded-full p-0.5 ${
+                    {/* صورة المستخدم مع حدود ملونة */}
+                    <div className={`relative w-14 h-14 rounded-full p-1 ${
                       seat.isSpeaking && !seat.isMuted
-                        ? 'bg-gradient-to-r from-green-400 to-green-500 shadow-md shadow-green-500/50 animate-pulse'
+                        ? 'bg-gradient-to-r from-green-400 to-green-500 shadow-lg shadow-green-500/50 animate-pulse'
                         : seat.user._id === user.id
                           ? 'bg-gradient-to-r from-green-500 to-green-600'
                           : (seat.user.role === 'admin' || seat.user.isAdmin)
-                            ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-md shadow-red-500/50'
+                            ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/50'
                             : 'bg-gradient-to-r from-blue-500 to-purple-600'
-                    } shadow-md`}>
+                    } shadow-lg`}>
                       <div className="w-full h-full rounded-full overflow-hidden bg-gray-800">
                         {seat.user.profileImage ? (
                           <img
@@ -1112,11 +1247,7 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">
-                              {seat.user.username.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          <img src="/images/default-avatar.png" alt="الصورة الشخصية" className="w-full h-full object-cover" />
                         )}
                       </div>
 
@@ -1250,8 +1381,8 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                   <div className="flex flex-col items-center">
                     {/* المقعد الفارغ - قابل للضغط */}
                     <button
-                      onClick={() => !isInSeat && !isInWaitingQueue ? joinSeat(seat.seatNumber) : null}
-                      disabled={isConnecting || isInSeat || isInWaitingQueue}
+                      onClick={() => !isInSeat ? joinSeat(seat.seatNumber) : null}
+                      disabled={isConnecting || isInSeat}
                       className="relative w-14 h-14 rounded-full p-1 bg-gradient-to-r from-gray-600 to-gray-700 shadow-lg hover:from-purple-600 hover:to-purple-700 disabled:hover:from-gray-600 disabled:hover:to-gray-700 transition-all duration-300 disabled:cursor-not-allowed"
                     >
                       <div className="w-full h-full rounded-full bg-gray-800/50 border-2 border-dashed border-gray-500 flex items-center justify-center">
@@ -1265,7 +1396,7 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
           </div>
 
           {/* أزرار التحكم */}
-          {!isInSeat && !isInWaitingQueue && roomData.seats.every(seat => seat.user) && (
+          {!isInSeat && roomData.seats.every(seat => seat.user) && (
             <button
               onClick={requestMic}
               disabled={isConnecting}
@@ -1439,10 +1570,7 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                         {formatMessageTime(message.timestamp)}
                       </span>
                     </div>
-                    <div
-                      className="text-sm leading-snug"
-                      style={{ color: message.textColor || '#ffffff' }}
-                    >
+                    <div className="text-sm leading-snug">
                       {message.content}
                     </div>
                   </div>
@@ -1530,40 +1658,6 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
               />
             )}
 
-            {/* منتقي الألوان */}
-            {showColorPicker && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-gray-800/95 backdrop-blur-sm border border-gray-600/50 rounded-lg p-3 shadow-xl">
-                <div className="text-xs text-gray-300 mb-2 font-medium">اختر لون النص:</div>
-                <div className="grid grid-cols-5 gap-2">
-                  {chatColors.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setSelectedTextColor(color.value);
-                        setShowColorPicker(false);
-                      }}
-                      className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
-                        selectedTextColor === color.value
-                          ? 'border-white shadow-lg'
-                          : 'border-gray-500 hover:border-gray-300'
-                      }`}
-                      style={{ backgroundColor: color.value }}
-                      title={color.name}
-                    >
-                      {selectedTextColor === color.value && (
-                        <div className="w-full h-full rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-black rounded-full opacity-50"></div>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <div className="flex-1 relative">
                 <input
@@ -1573,28 +1667,10 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                   onChange={handleInputChange}
                   placeholder="اكتب رسالتك..."
                   maxLength={500}
-                  style={{ color: selectedTextColor }}
-                  className="w-full px-3 py-2 pr-16 bg-gray-800/50 border border-gray-600/50 rounded-lg placeholder-gray-400 focus:outline-none focus:border-purple-500/50 text-sm"
+                  className="w-full px-3 py-2 pr-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 text-sm"
                   onFocus={() => setShowSuggestions(textSuggestions.length > 0)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 />
-
-                {/* زر اختيار اللون */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowColorPicker(!showColorPicker);
-                    setShowEmojiPicker(false);
-                  }}
-                  className="absolute left-8 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-purple-400 transition-colors"
-                >
-                  <div
-                    className="w-4 h-4 rounded-full border-2 border-gray-400"
-                    style={{ backgroundColor: selectedTextColor }}
-                  ></div>
-                </button>
 
                 {/* زر الإيموجي */}
                 <button
@@ -1603,7 +1679,6 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                     e.preventDefault();
                     e.stopPropagation();
                     setShowEmojiPicker(!showEmojiPicker);
-                    setShowColorPicker(false);
                   }}
                   className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-400 transition-colors"
                 >
@@ -1619,7 +1694,7 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
                 <Send className="w-4 h-4" />
               </button>
 
-              {!isInWaitingQueue && (
+              {!isInSeat && (
                 <button
                   type="button"
                   onClick={requestMic}
@@ -1747,8 +1822,6 @@ const MobileVoiceRoom: React.FC<MobileVoiceRoomProps> = ({ user, wsService, onBa
           </div>
         </div>
       )}
-
-
     </div>
   );
 };

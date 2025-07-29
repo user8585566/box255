@@ -1261,7 +1261,7 @@
                     const playerName = window.playerHeader.username || 'اللاعب';
                     const playerBalance = window.playerHeader.balance || gameState.coins;
                     const playerId = window.playerHeader.playerId || '';
-                    const playerAvatar = window.playerHeader.avatar || '/images/default-avatar.png';
+                    const playerAvatar = window.playerHeader.profileImage || '/images/default-avatar.png';
 
                     console.log('👤 بيانات اللاعب من الهيدر:', {
                         username: playerName,
@@ -1569,12 +1569,10 @@
                     const balanceUpdate = await window.gameEconomy.updatePlayerBalance(gameResult);
                     if (balanceUpdate && balanceUpdate.success) {
                         console.log('✅ تم تحديث النظام الاقتصادي بنجاح:', balanceUpdate);
-
-                        // تحديث الرصيد المحلي
+                        // تحديث الرصيد المحلي فقط من السيرفر
                         if (balanceUpdate.newBalance && typeof balanceUpdate.newBalance.gold === 'number') {
                             gameState.coins = balanceUpdate.newBalance.gold;
                         }
-
                         // تحديث الهيدر
                         if (window.playerHeader && typeof window.playerHeader.updateBalance === 'function') {
                             window.playerHeader.updateBalance(balanceUpdate.newBalance);

@@ -265,14 +265,9 @@ class ApiService {
 
   // مغادرة المقعد الصوتي
   async leaveVoiceSeat() {
-    return this.request('/api/voice-room/leave-seat', {
+    return this.request('/api/voice-room/leave-seat-simple', {
       method: 'POST'
     });
-  }
-
-  // مغادرة المقعد (alias)
-  async leaveSeat() {
-    return this.leaveVoiceSeat();
   }
 
   // طلب الانضمام لقائمة انتظار المايك

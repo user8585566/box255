@@ -42,7 +42,7 @@ interface VoiceSeatsProps {
   currentUser: User;
   isInSeat: boolean;
   currentSeatNumber: number | null;
-  isInWaitingQueue: boolean;
+  // إزالة isInWaitingQueue - تبسيط النظام
   isConnecting: boolean;
   onJoinSeat: (seatNumber: number) => void;
   onRequestMic: () => void;
@@ -55,7 +55,7 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
   currentUser,
   isInSeat,
   currentSeatNumber,
-  isInWaitingQueue,
+  // isInWaitingQueue removed
   isConnecting,
   onJoinSeat,
   onRequestMic,
@@ -79,7 +79,7 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
   };
 
   const availableSeats = seats.filter(seat => !seat.user);
-  const canJoinDirectly = availableSeats.length > 0 && !isInSeat && !isInWaitingQueue;
+  const canJoinDirectly = availableSeats.length > 0 && !isInSeat;
 
   return (
     <div className="space-y-6">
@@ -105,15 +105,15 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
                       {seat.user.profileImage ? (
                         <img
                           src={seat.user.profileImage}
-                          alt={seat.user.username}
+                          alt="الصورة الشخصية"
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                          <span className="text-white font-bold text-xl">
-                            {seat.user.username.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        <img
+                          src="/images/default-avatar.png"
+                          alt="الصورة الشخصية"
+                          className="w-full h-full object-cover"
+                        />
                       )}
                     </div>
 
@@ -122,7 +122,7 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
                       seat.isMuted
                         ? 'bg-red-600'
                         : seat.isSpeaking
-                          ? 'bg-green-600 animate-pulse shadow-green-500/50'
+                          ? 'bg-green-600 animate-pulse'
                           : 'bg-gray-600'
                     }`}>
                       {seat.isMuted ? (
@@ -131,14 +131,6 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
                         <Mic className="w-4 h-4 text-white" />
                       )}
                     </div>
-
-                    {/* مؤشر التحدث - دوائر متحركة */}
-                    {seat.isSpeaking && !seat.isMuted && (
-                      <div className="absolute inset-0 rounded-full">
-                        <div className="absolute inset-0 rounded-full border-2 border-green-400 animate-ping"></div>
-                        <div className="absolute inset-0 rounded-full border-2 border-green-400 animate-ping" style={{ animationDelay: '0.5s' }}></div>
-                      </div>
-                    )}
                   </div>
 
                   {/* معلومات المستخدم */}
@@ -185,7 +177,7 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
 
         {/* أزرار التحكم */}
         <div className="mt-6 flex flex-wrap gap-3 justify-center">
-          {!isInSeat && !isInWaitingQueue && availableSeats.length === 0 && (
+          {!isInSeat && availableSeats.length === 0 && (
             <button
               onClick={onRequestMic}
               disabled={isConnecting}
@@ -196,7 +188,7 @@ const VoiceSeats: React.FC<VoiceSeatsProps> = ({
             </button>
           )}
 
-          {isInWaitingQueue && (
+          {/* قائمة الانتظار تم إلغاؤها */ false && (
             <div className="flex items-center gap-3">
               <div className="px-4 py-2 bg-yellow-900/50 border border-yellow-500/50 rounded-lg text-yellow-300 flex items-center gap-2">
                 <Clock className="w-4 h-4" />

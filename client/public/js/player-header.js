@@ -8,7 +8,7 @@ class PlayerHeader {
         this.balance = 0;
         this.pearls = 0;
         this.playerId = '';
-        this.avatar = '';
+        this.profileImage = '';
         this.initialized = false;
     }
 
@@ -302,12 +302,12 @@ class PlayerHeader {
                         this.username = data.username || 'لاعب';
                         this.balance = data.coins || data.goldCoins || data.balance || 0;
                         this.playerId = data.playerId || data._id || data.id || '';
-                        this.avatar = data.profileImage || data.avatar || '';
+                        this.profileImage = data.profileImage || '';
                         console.log('✅ تم تحميل بيانات اللاعب من API:', {
                             username: this.username,
                             balance: this.balance,
                             playerId: this.playerId,
-                            avatar: this.avatar ? 'موجود' : 'غير موجود'
+                            avatar: this.profileImage ? 'موجود' : 'غير موجود'
                         });
                         return;
                     }
@@ -323,7 +323,7 @@ class PlayerHeader {
                     this.username = playerData.username || 'لاعب';
                     this.balance = playerData.balance || 0;
                     this.playerId = playerData.playerId || '';
-                    this.avatar = playerData.avatar || '';
+                    this.profileImage = playerData.profileImage || '';
                     console.log('✅ تم تحميل بيانات اللاعب من النظام الاقتصادي');
                     return;
                 }
@@ -336,7 +336,7 @@ class PlayerHeader {
                 this.username = data.username || 'لاعب';
                 this.balance = data.balance || data.coins || 0;
                 this.playerId = data.playerId || data.id || '';
-                this.avatar = data.avatar || '';
+                this.profileImage = data.profileImage || '';
                 console.log('✅ تم تحميل بيانات اللاعب من localStorage');
                 return;
             }
@@ -344,12 +344,14 @@ class PlayerHeader {
             // بيانات افتراضية
             this.username = 'لاعب تجريبي';
             this.balance = 1000;
+            this.profileImage = 'images/default-avatar.png'; // إضافة صورة افتراضية
             console.log('⚠️ استخدام بيانات افتراضية');
 
         } catch (error) {
             console.error('❌ خطأ في تحميل بيانات اللاعب:', error);
             this.username = 'لاعب';
             this.balance = 0;
+            this.profileImage = 'images/default-avatar.png'; // إضافة صورة افتراضية
         }
     }
 
@@ -381,48 +383,12 @@ class PlayerHeader {
      */
     updatePlayerAvatar() {
         const avatarImg = document.getElementById('player-avatar-img');
-        const avatarIcon = document.getElementById('player-avatar-icon');
-
-        if (this.avatar && this.avatar.trim() !== '') {
-            if (avatarImg) {
-                // التحقق من صحة رابط الصورة
-                const img = new Image();
-                img.onload = () => {
-                    avatarImg.src = this.avatar;
-                    avatarImg.style.display = 'block';
-                    if (avatarIcon) avatarIcon.style.display = 'none';
-                    console.log('✅ تم تحميل صورة اللاعب بنجاح:', this.avatar.substring(0, 50) + '...');
-                };
-                img.onerror = () => {
-                    console.warn('⚠️ فشل في تحميل صورة اللاعب، استخدام الأيقونة الافتراضية');
-                    this.showDefaultAvatar(avatarIcon, avatarImg);
-                };
-
-                // إضافة timeout للتحقق من تحميل الصورة
-                setTimeout(() => {
-                    if (!img.complete || img.naturalWidth === 0) {
-                        console.warn('⚠️ انتهت مهلة تحميل الصورة، استخدام الأيقونة الافتراضية');
-                        this.showDefaultAvatar(avatarIcon, avatarImg);
-                    }
-                }, 5000);
-
-                img.src = this.avatar;
-            }
+        if (this.profileImage && this.profileImage.trim() !== '') {
+            avatarImg.src = this.profileImage;
+            avatarImg.style.display = 'block';
         } else {
-            this.showDefaultAvatar(avatarIcon, avatarImg);
-        }
-    }
-
-    /**
-     * عرض الأيقونة الافتراضية
-     */
-    showDefaultAvatar(avatarIcon, avatarImg) {
-        if (avatarIcon) {
-            avatarIcon.style.display = 'block';
-            avatarIcon.textContent = this.username ? this.username.charAt(0).toUpperCase() : '👤';
-        }
-        if (avatarImg) {
-            avatarImg.style.display = 'none';
+            avatarImg.src = 'images/default-avatar.png';
+            avatarImg.style.display = 'block';
         }
     }
 

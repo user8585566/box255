@@ -22,6 +22,8 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cron = require('node-cron');
+const GameTransaction = require('./models/GameTransaction');
+const VoiceRoom = require('./models/VoiceRoom');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -93,7 +95,6 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     trim: true
   },
-  avatar: String,
   profileImage: String,
   gender: {
     type: String,
@@ -824,7 +825,7 @@ app.put('/api/profile/update', authenticateToken, async (req, res) => {
   try {
     const { profileImage, gender, username, email } = req.body;
 
-    console.log('🔄 Profile update request for user:', req.user.userId);
+    console.log('🔄 Profile update request for user:', req.user?.userId || 'unknown');
     console.log('📝 Update data:', {
       hasProfileImage: !!profileImage,
       gender,
@@ -896,10 +897,10 @@ app.put('/api/profile/update', authenticateToken, async (req, res) => {
 // جلب البيانات الكاملة للمستخدم الحالي
 app.get('/api/profile/me', authenticateToken, async (req, res) => {
   try {
-    console.log('📡 GET /api/profile/me called for user:', req.user.userId);
+    console.log('📡 GET /api/profile/me called for user:', req.user?.userId || 'unknown');
     const user = await User.findById(req.user.userId);
     if (!user) {
-      console.log('❌ User not found:', req.user.userId);
+      console.log('❌ User not found:', req.user?.userId || 'unknown');
       return res.status(404).json({ message: 'المستخدم غير موجود' });
     }
 
@@ -1315,10 +1316,42 @@ app.post('/api/voice-room/leave-listener', authenticateToken, async (req, res) =
   }
 });
 
-// مغادرة المقعد الصوتي
-app.post('/api/voice-room/leave-seat', authenticateToken, async (req, res) => {
+// مغادرة المقعد الصوتي (يدعم sendBeacon)
+app.post('/api/voice-room/leave-seat', async (req, res) => {
+  console.log('🚪 Leave seat request received');
+  console.log('Headers:', req.headers.authorization ? 'Bearer token present' : 'No Bearer token');
+  console.log('Body:', req.body);
+
+  // محاولة استخدام token من header أو body (للـ sendBeacon)
+  let userId;
+
   try {
-    const user = await User.findById(req.user.userId);
+    // محاولة استخدام authenticateToken العادي
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+      console.log('✅ Token from header, userId:', userId);
+    } else if (req.body.token) {
+      // للـ sendBeacon - token في الـ body
+      const decoded = jwt.verify(req.body.token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+      console.log('✅ Token from body, userId:', userId);
+    } else if (req.body.userId) {
+      // fallback - userId مباشر من body
+      userId = req.body.userId;
+      console.log('⚠️ Using userId from body directly:', userId);
+    } else {
+      console.log('❌ No authentication method found');
+      return res.status(401).json({ message: 'غير مصرح' });
+    }
+  } catch (error) {
+    console.log('❌ Token verification failed:', error.message);
+    return res.status(401).json({ message: 'رمز غير صالح' });
+  }
+  try {
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: 'المستخدم غير موجود' });
@@ -1328,7 +1361,7 @@ app.post('/api/voice-room/leave-seat', authenticateToken, async (req, res) => {
 
     // البحث عن مقعد المستخدم
     const userSeat = room.seats.find(seat =>
-      seat.user && seat.user.toString() === req.user.userId
+      seat.user && seat.user.toString() === userId
     );
 
     if (!userSeat) {
@@ -1346,7 +1379,7 @@ app.post('/api/voice-room/leave-seat', authenticateToken, async (req, res) => {
 
     // إضافة رسالة نظام
     room.textMessages.push({
-      sender: req.user.userId,
+      sender: userId,
       senderPlayerId: user.playerId,
       content: `${user.username} غادر المقعد ${seatNumber}`,
       messageType: 'system'
@@ -1384,6 +1417,56 @@ app.post('/api/voice-room/leave-seat', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Leave seat error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    console.error('User ID:', userId);
+    res.status(500).json({
+      message: 'خطأ في مغادرة المقعد',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// مغادرة المقعد الصوتي (مبسط مع authenticateToken)
+app.post('/api/voice-room/leave-seat-simple', authenticateToken, async (req, res) => {
+  try {
+    console.log('🚪 Simple leave seat request from user:', req.user?.userId || 'unknown');
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    const room = await getOrCreateDefaultVoiceRoom();
+
+    // البحث عن مقعد المستخدم
+    const userSeat = room.seats.find(seat =>
+      seat.user && seat.user.toString() === req.user.userId
+    );
+
+    if (!userSeat) {
+      return res.status(400).json({ message: 'أنت لست في أي مقعد' });
+    }
+
+    const seatNumber = userSeat.seatNumber;
+
+    // إفراغ المقعد
+    userSeat.user = null;
+    userSeat.userPlayerId = null;
+    userSeat.joinedAt = null;
+    userSeat.isSpeaking = false;
+    userSeat.isMuted = false;
+
+    await room.save();
+
+    console.log(`✅ User ${req.user?.userId || 'unknown'} left seat ${seatNumber}`);
+
+    res.json({
+      message: `تم مغادرة المقعد ${seatNumber} بنجاح`,
+      seatNumber
+    });
+  } catch (error) {
+    console.error('Simple leave seat error:', error);
     res.status(500).json({ message: 'خطأ في مغادرة المقعد' });
   }
 });
@@ -3069,7 +3152,7 @@ app.post('/api/profile/charge-balance', authenticateToken, async (req, res) => {
 
       if (existingFreeCharge) {
         return res.status(400).json({
-          message: 'لقد استخدمت الشحن المجاني لهذه الفئة من قبل'
+          message: 'لقد استخدمت الشحن المجاني لهذه الفئة من قبل. الشحن المجاني متاح مرة واحدة فقط لكل نوع.'
         });
       }
 
@@ -3645,26 +3728,46 @@ app.put('/api/users/admin/manage-user-image', authenticateToken, async (req, res
 
 // تحديث رصيد اللاعب
 app.post('/api/users/update-balance', authenticateToken, async (req, res) => {
+  const session = await User.startSession();
+  session.startTransaction();
   try {
     const { balanceChange, gameType, sessionId, gameResult } = req.body;
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.userId).session(session);
 
     if (!user) {
+      await session.abortTransaction();
       return res.status(404).json({ message: 'المستخدم غير موجود' });
     }
 
     // التحقق من صحة التغيير
     const newBalance = (user.goldCoins || 0) + balanceChange;
     if (newBalance < 0) {
+      await session.abortTransaction();
       return res.status(400).json({ message: 'رصيد غير كافي' });
     }
 
     // تحديث الرصيد
+    const oldBalance = user.goldCoins || 0;
     user.goldCoins = newBalance;
-    await user.save();
+    await user.save({ session });
+
+    // حفظ سجل العملية المالية
+    if (typeof GameTransaction !== 'undefined') {
+      await GameTransaction.create([{
+        userId: req.user.userId,
+        type: balanceChange > 0 ? 'credit' : 'debit',
+        amount: Math.abs(balanceChange),
+        balanceBefore: oldBalance,
+        balanceAfter: newBalance,
+        gameType,
+        sessionId,
+        details: gameResult,
+        createdAt: new Date()
+      }], { session });
+    }
 
     // حفظ إحصائيات اللعبة
-    const gameStats = new GameStats({
+    await GameStats.create([{
       userId: req.user.userId,
       gameType: gameType,
       sessionId: sessionId,
@@ -3677,9 +3780,10 @@ app.post('/api/users/update-balance', authenticateToken, async (req, res) => {
       skillFactor: gameResult.skillFactor || 0,
       economicFactor: gameResult.economicFactor || 0,
       winProbability: gameResult.probability || 0
-    });
+    }], { session });
 
-    await gameStats.save();
+    await session.commitTransaction();
+    session.endSession();
 
     res.json({
       success: true,
@@ -3688,6 +3792,8 @@ app.post('/api/users/update-balance', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('خطأ في تحديث الرصيد:', error);
     res.status(500).json({ message: 'خطأ في تحديث الرصيد' });
   }
@@ -3964,393 +4070,6 @@ wss.on('connection', (socket) => {
               fromUserId: currentUserId
             }
           }));
-          console.log(`🔊 WebRTC signal sent from ${currentUserId} to ${targetUserId}`);
-        }
-      }
-
-      // النشاط الصوتي (التحدث) - محسن مع التأثيرات البصرية
-      else if (message.type === 'voice_activity') {
-        // بث حالة التحدث مع جميع البيانات للتأثيرات البصرية
-        const voiceRoomClients = Array.from(connectedClients.values()).filter(client =>
-          client.isInVoiceRoom && client.userId !== currentUserId
-        );
-
-        voiceRoomClients.forEach(client => {
-          if (client.socket.readyState === 1) {
-            client.socket.send(JSON.stringify({
-              type: 'voice_activity',
-              data: {
-                userId: currentUserId,
-                username: message.data.username,
-                role: message.data.role,
-                isAdmin: message.data.isAdmin,
-                isSpeaking: message.data.isSpeaking,
-                isMuted: message.data.isMuted,
-                level: message.data.level,
-                seatNumber: message.data.seatNumber
-              }
-            }));
-          }
-        });
-
-        // Voice activity logs reduced for better performance
-      }
-
-      // ========== WEBRTC SIGNALING ==========
-
-      // انضمام لغرفة صوتية
-      else if (message.type === 'join_voice_room') {
-        const { roomId, userId } = message.data;
-
-        // تحديث currentUserId إذا لم يكن محدد
-        if (!currentUserId && userId) {
-          currentUserId = userId;
-          console.log(`🔧 Updated currentUserId to: ${currentUserId}`);
-        }
-
-        console.log(`📥 Received join_voice_room from ${currentUserId} for room: ${roomId}`);
-
-        // تحديث حالة العميل
-        if (connectedClients.has(currentUserId)) {
-          connectedClients.get(currentUserId).voiceRoomId = roomId;
-          console.log(`✅ Updated client ${currentUserId} voiceRoomId to: ${roomId}`);
-        } else if (currentUserId) {
-          // إنشاء client جديد إذا لم يكن موجود
-          connectedClients.set(currentUserId, {
-            socket,
-            userId: currentUserId,
-            voiceRoomId: roomId,
-            isInVoiceRoom: true
-          });
-          console.log(`✅ Created new client entry for ${currentUserId}`);
-        }
-
-        // إشعار المستخدمين الآخرين في نفس الغرفة
-        const roomClients = Array.from(connectedClients.values()).filter(client =>
-          client.voiceRoomId === roomId && client.userId !== currentUserId
-        );
-
-        console.log(`🔍 Found ${roomClients.length} other users in room ${roomId}`);
-
-        roomClients.forEach(client => {
-          if (client.socket.readyState === 1) {
-            console.log(`📤 Notifying ${client.userId} about ${currentUserId} joining`);
-            client.socket.send(JSON.stringify({
-              type: 'user_joined_voice',
-              data: { userId: currentUserId }
-            }));
-          }
-        });
-
-        console.log(`🎤 User ${currentUserId} joined voice room: ${roomId}`);
-      }
-
-      // مغادرة غرفة صوتية
-      else if (message.type === 'leave_voice_room') {
-        const { roomId, userId } = message.data;
-
-        // إشعار المستخدمين الآخرين في نفس الغرفة
-        const roomClients = Array.from(connectedClients.values()).filter(client =>
-          client.voiceRoomId === roomId && client.userId !== currentUserId
-        );
-
-        roomClients.forEach(client => {
-          if (client.socket.readyState === 1) {
-            client.socket.send(JSON.stringify({
-              type: 'user_left_voice',
-              data: { userId: currentUserId }
-            }));
-          }
-        });
-
-        // إزالة من الغرفة
-        if (connectedClients.has(currentUserId)) {
-          connectedClients.get(currentUserId).voiceRoomId = null;
-        }
-
-        console.log(`🔇 User ${currentUserId} left voice room: ${roomId}`);
-      }
-
-      // WebRTC Offer
-      else if (message.type === 'webrtc_offer') {
-        const { offer, targetUserId, fromUserId } = message.data;
-        console.log(`📥 Received WebRTC offer from ${fromUserId} to ${targetUserId}`);
-
-        const targetClient = Array.from(connectedClients.values()).find(client =>
-          client.userId === targetUserId
-        );
-
-        if (targetClient && targetClient.socket.readyState === 1) {
-          targetClient.socket.send(JSON.stringify({
-            type: 'webrtc_offer',
-            data: { offer, fromUserId }
-          }));
-          console.log(`📤 WebRTC offer sent from ${fromUserId} to ${targetUserId}`);
-        } else {
-          console.warn(`⚠️ Target client ${targetUserId} not found or not connected`);
-        }
-      }
-
-      // WebRTC Answer
-      else if (message.type === 'webrtc_answer') {
-        const { answer, targetUserId, fromUserId } = message.data;
-
-        const targetClient = Array.from(connectedClients.values()).find(client =>
-          client.userId === targetUserId
-        );
-
-        if (targetClient && targetClient.socket.readyState === 1) {
-          targetClient.socket.send(JSON.stringify({
-            type: 'webrtc_answer',
-            data: { answer, fromUserId }
-          }));
-          console.log(`📤 WebRTC answer sent from ${fromUserId} to ${targetUserId}`);
-        }
-      }
-
-      // WebRTC ICE Candidate
-      else if (message.type === 'webrtc_ice_candidate') {
-        const { candidate, targetUserId, fromUserId } = message.data;
-
-        const targetClient = Array.from(connectedClients.values()).find(client =>
-          client.userId === targetUserId
-        );
-
-        if (targetClient && targetClient.socket.readyState === 1) {
-          targetClient.socket.send(JSON.stringify({
-            type: 'webrtc_ice_candidate',
-            data: { candidate, fromUserId }
-          }));
-          console.log(`📤 ICE candidate sent from ${fromUserId} to ${targetUserId}`);
-        }
-      }
-
-      else {
-        // رسائل أخرى - بث عادي
-        wss.clients.forEach((client) => {
-          if (client.readyState === 1) {
-            client.send(textData);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
-      // في حالة الخطأ، بث الرسالة كما هي
-      const textData = typeof data === 'string' ? data : data.toString();
-      wss.clients.forEach((client) => {
-        if (client.readyState === 1) {
-          client.send(textData);
-        }
-      });
-    }
-  });
-
-  // دالة إزالة المستخدم من المقعد الصوتي
-  async function removeUserFromVoiceSeat(userId) {
-    try {
-      const room = await getOrCreateDefaultVoiceRoom();
-
-      // البحث عن مقعد المستخدم
-      const userSeat = room.seats.find(seat =>
-        seat.user && seat.user.toString() === userId
-      );
-
-      if (userSeat) {
-        // إزالة المستخدم من المقعد
-        userSeat.user = null;
-        userSeat.userPlayerId = null;
-        userSeat.isSpeaking = false;
-        userSeat.isMuted = false;
-        userSeat.joinedAt = null;
-
-        await room.save();
-
-        console.log(`🗑️ Removed user ${userId} from voice seat ${userSeat.seatNumber}`);
-
-        // إشعار جميع المستخدمين بالتحديث
-        const connectedClientsArray = Array.from(connectedClients.values());
-        const voiceRoomClients = connectedClientsArray.filter(client => client.isInVoiceRoom);
-
-        voiceRoomClients.forEach(client => {
-          if (client.socket.readyState === 1) {
-            client.socket.send(JSON.stringify({
-              type: 'voice_room_update',
-              data: {
-                action: 'seat_left',
-                userId: userId,
-                seatNumber: userSeat.seatNumber
-              }
-            }));
-          }
-        });
-
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Error removing user from voice seat:', error);
-      return false;
-    }
-  }
-
-  socket.on('close', async () => {
-    console.log('🛑 WebSocket client disconnected');
-
-    if (currentUserId) {
-      try {
-        // إزالة المستخدم من المقعد الصوتي إذا كان جالساً
-        await removeUserFromVoiceSeat(currentUserId);
-
-        // إشعار المستخدمين الآخرين بمغادرة المستخدم
-        const connectedClientsArray = Array.from(connectedClients.values());
-        const voiceRoomClients = connectedClientsArray.filter(client => client.isInVoiceRoom);
-
-        voiceRoomClients.forEach(client => {
-          if (client.socket.readyState === 1) {
-            client.socket.send(JSON.stringify({
-              type: 'user_left_voice',
-              data: { userId: currentUserId }
-            }));
-          }
-        });
-
-        // إرسال تحديث الغرفة الصوتية
-        voiceRoomClients.forEach(client => {
-          if (client.socket.readyState === 1) {
-            client.socket.send(JSON.stringify({
-              type: 'voice_room_update',
-              data: { action: 'user_disconnected', userId: currentUserId }
-            }));
-          }
-        });
-
-        connectedClients.delete(currentUserId);
-        console.log(`🗑️ Removed user ${currentUserId} from connected clients and voice seat`);
-      } catch (error) {
-        console.error('Error removing user from voice seat on disconnect:', error);
-        // حتى لو فشل في إزالة المستخدم من المقعد، نزيله من العملاء المتصلين
-        connectedClients.delete(currentUserId);
-      }
-    } else {
-      // إزالة العميل من القائمة حتى لو لم يكن لديه userId
-      const clientToRemove = Array.from(connectedClients.entries()).find(([id, client]) => client.socket === socket);
-      if (clientToRemove) {
-        connectedClients.delete(clientToRemove[0]);
-        console.log(`🗑️ Removed anonymous client from connected clients`);
-      }
-    }
-  });
-});
-
-// دالة حذف المحادثات القديمة (أكثر من 3 أيام)
-const deleteOldMessages = async () => {
-  try {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-    const result = await Message.deleteMany({
-      createdAt: { $lt: threeDaysAgo }
-    });
-
-    if (result.deletedCount > 0) {
-      console.log(`🗑️ Deleted ${result.deletedCount} old messages (older than 3 days)`);
-    }
-  } catch (error) {
-    console.error('Error deleting old messages:', error);
-  }
-};
-
-// تشغيل مهمة حذف المحادثات القديمة كل يوم في الساعة 2:00 صباحاً
-cron.schedule('0 2 * * *', () => {
-  console.log('🕐 Running daily cleanup of old messages...');
-  deleteOldMessages();
-});
-
-// تشغيل حذف المحادثات القديمة عند بدء تشغيل السيرفر
-console.log('🧹 Running initial cleanup of old messages...');
-deleteOldMessages();
-
-// إنشاء الغرفة الصوتية الافتراضية عند بدء تشغيل السيرفر
-const initializeDefaultVoiceRoom = async () => {
-  try {
-    await getOrCreateDefaultVoiceRoom();
-    console.log('🎤 Default voice room initialized');
-  } catch (error) {
-    console.error('❌ Error initializing default voice room:', error);
-  }
-};
-
-initializeDefaultVoiceRoom();
-
-
-// نظام حذف رسائل الغرفة الصوتية كل 10 دقائق
-setInterval(async () => {
-  try {
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-
-    // حذف الرسائل القديمة من جميع الغرف الصوتية
-    const rooms = await VoiceRoom.find({});
-    let totalDeleted = 0;
-
-    for (const room of rooms) {
-      const initialCount = room.textMessages.length;
-      room.textMessages = room.textMessages.filter(
-        message => message.timestamp > tenMinutesAgo
-      );
-      const deletedCount = initialCount - room.textMessages.length;
-      totalDeleted += deletedCount;
-
-      if (deletedCount > 0) {
-        await room.save();
-      }
-    }
-
-    if (totalDeleted > 0) {
-      console.log(`🗑️ تم حذف ${totalDeleted} رسالة قديمة من الغرف الصوتية`);
-    }
-  } catch (error) {
-    console.error('خطأ في حذف رسائل الغرف الصوتية:', error);
-  }
-}, 10 * 60 * 1000); // كل 10 دقائق
-
-// معالجة الإشارات لضمان إغلاق آمن للتطبيق
-const gracefulShutdown = (signal) => {
-  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
-  
-  // إغلاق خادم HTTP
-  httpServer.close(() => {
-    console.log('✅ HTTP server closed');
-  });
-  
-  // إغلاق خادم WebSocket
-  wss.close(() => {
-    console.log('✅ WebSocket server closed');
-  });
-  
-  // إغلاق اتصال MongoDB (Mongoose 7+ لا يقبل callback)
-  mongoose.connection.close().then(() => {
-    console.log('✅ MongoDB connection closed');
-    process.exit(0);
-  }).catch((error) => {
-    console.error('❌ Error closing MongoDB connection:', error);
-    process.exit(1);
-  });
-  
-  // إجبار الإغلاق بعد 10 ثوانٍ إذا لم يتم الإغلاق بشكل طبيعي
-  setTimeout(() => {
-    console.error('❌ Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 10000);
-};
-
-// استماع لإشارات الإغلاق
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log('📅 Message cleanup scheduled: Daily at 2:00 AM (messages older than 3 days will be deleted)');
-  console.log('🗑️ Voice room messages auto-delete every 10 minutes');
-  console.log('👥 Voice room capacity: 100 users');
-});
+          // تقليل logs - فقط للـ offers والـ answers
+          if (data.type === 'webrtc_offer' || data.type === 'webrtc_answer') {
+            console.log(`
